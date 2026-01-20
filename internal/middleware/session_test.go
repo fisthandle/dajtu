@@ -43,7 +43,7 @@ func TestSessionMiddleware_ValidSession(t *testing.T) {
 	db := testDB(t)
 	mw := NewSessionMiddleware(db)
 
-	user, _ := db.GetOrCreateBratUser("testuser", 100)
+	user, _ := db.GetOrCreateBratUser("testuser")
 	session, _ := db.CreateSession(user.ID, 30)
 
 	var gotUser *storage.User

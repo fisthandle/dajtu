@@ -267,27 +267,27 @@ func TestDB_GetUserBySlug_NotFound(t *testing.T) {
 func TestDB_GetOrCreateBratUser_New(t *testing.T) {
 	db := testDB(t)
 
-	user, err := db.GetOrCreateBratUser("testuser", 1000)
+	user, err := db.GetOrCreateBratUser("testuser")
 	if err != nil {
 		t.Fatalf("GetOrCreateBratUser failed: %v", err)
 	}
 	if user.DisplayName != "testuser" {
 		t.Errorf("DisplayName = %q, want %q", user.DisplayName, "testuser")
 	}
-	if user.BratPunktacja != 1000 {
-		t.Errorf("BratPunktacja = %d, want %d", user.BratPunktacja, 1000)
-	}
 	if user.Slug == "" {
 		t.Error("Slug should not be empty")
+	}
+	if len(user.Slug) != 4 {
+		t.Errorf("Slug length = %d, want 4", len(user.Slug))
 	}
 }
 
 func TestDB_GetOrCreateBratUser_Existing(t *testing.T) {
 	db := testDB(t)
 
-	user1, _ := db.GetOrCreateBratUser("testuser", 500)
+	user1, _ := db.GetOrCreateBratUser("testuser")
 
-	user2, err := db.GetOrCreateBratUser("testuser", 1500)
+	user2, err := db.GetOrCreateBratUser("testuser")
 	if err != nil {
 		t.Fatalf("GetOrCreateBratUser failed: %v", err)
 	}
@@ -295,8 +295,8 @@ func TestDB_GetOrCreateBratUser_Existing(t *testing.T) {
 	if user2.ID != user1.ID {
 		t.Errorf("should return same user, got ID %d, want %d", user2.ID, user1.ID)
 	}
-	if user2.BratPunktacja != 1500 {
-		t.Errorf("BratPunktacja should update, got %d, want %d", user2.BratPunktacja, 1500)
+	if user2.Slug != user1.Slug {
+		t.Errorf("should return same slug, got %s, want %s", user2.Slug, user1.Slug)
 	}
 }
 
@@ -561,7 +561,7 @@ func TestDB_CreateSession(t *testing.T) {
 	db := testDB(t)
 
 	// Create user first
-	user, err := db.GetOrCreateBratUser("testuser", 100)
+	user, err := db.GetOrCreateBratUser("testuser")
 	if err != nil {
 		t.Fatalf("GetOrCreateBratUser() error = %v", err)
 	}
@@ -588,7 +588,7 @@ func TestDB_CreateSession(t *testing.T) {
 func TestDB_GetSession(t *testing.T) {
 	db := testDB(t)
 
-	user, _ := db.GetOrCreateBratUser("testuser", 100)
+	user, _ := db.GetOrCreateBratUser("testuser")
 	session, _ := db.CreateSession(user.ID, 30)
 
 	got, err := db.GetSession(session.Token)
@@ -618,7 +618,7 @@ func TestDB_GetSession_NotFound(t *testing.T) {
 func TestDB_GetSession_Expired(t *testing.T) {
 	db := testDB(t)
 
-	user, _ := db.GetOrCreateBratUser("testuser", 100)
+	user, _ := db.GetOrCreateBratUser("testuser")
 
 	// Insert expired session directly (expires_at in the past)
 	expiredToken := "expired_test_token"
@@ -642,7 +642,7 @@ func TestDB_GetSession_Expired(t *testing.T) {
 func TestDB_DeleteSession(t *testing.T) {
 	db := testDB(t)
 
-	user, _ := db.GetOrCreateBratUser("testuser", 100)
+	user, _ := db.GetOrCreateBratUser("testuser")
 	session, _ := db.CreateSession(user.ID, 30)
 
 	err := db.DeleteSession(session.Token)
@@ -659,7 +659,7 @@ func TestDB_DeleteSession(t *testing.T) {
 func TestDB_DeleteUserSessions(t *testing.T) {
 	db := testDB(t)
 
-	user, _ := db.GetOrCreateBratUser("testuser", 100)
+	user, _ := db.GetOrCreateBratUser("testuser")
 
 	// Create multiple sessions
 	s1, _ := db.CreateSession(user.ID, 30)
@@ -680,7 +680,7 @@ func TestDB_DeleteUserSessions(t *testing.T) {
 func TestDB_CleanExpiredSessions(t *testing.T) {
 	db := testDB(t)
 
-	user, _ := db.GetOrCreateBratUser("testuser", 100)
+	user, _ := db.GetOrCreateBratUser("testuser")
 
 	// Insert expired session directly (expires_at in the past)
 	_, err := db.conn.Exec(
@@ -703,7 +703,7 @@ func TestDB_CleanExpiredSessions(t *testing.T) {
 func TestDB_GetUserByID(t *testing.T) {
 	db := testDB(t)
 
-	user, _ := db.GetOrCreateBratUser("testuser", 100)
+	user, _ := db.GetOrCreateBratUser("testuser")
 
 	got, err := db.GetUserByID(user.ID)
 	if err != nil {

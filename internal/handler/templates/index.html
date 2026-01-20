@@ -134,19 +134,58 @@
             border-radius: 4px;
             color: #aaa;
         }
+        .flash {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1a3a1a;
+            border: 1px solid #2d5a2d;
+            color: #8f8;
+            padding: 15px 30px;
+            border-radius: 8px;
+            animation: fadeOut 5s forwards;
+            z-index: 100;
+        }
+        @keyframes fadeOut {
+            0%, 80% { opacity: 1; }
+            100% { opacity: 0; pointer-events: none; }
+        }
+        .user-info {
+            position: fixed;
+            top: 0;
+            right: 0;
+            padding: 15px 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            color: #888;
+            font-size: 0.9rem;
+        }
+        .user-info a { color: #4a9eff; text-decoration: none; }
+        .user-info button {
+            background: none;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            padding: 0;
+            font: inherit;
+        }
+        .user-info button:hover { color: #888; }
     </style>
 </head>
 <body>
-    <header style="position:fixed;top:0;right:0;padding:15px 20px;display:flex;gap:15px;align-items:center;">
-        {{ if .User }}
-        <a href="/u/{{ .User.Slug }}" style="color:#4a9eff;text-decoration:none;">{{ .User.DisplayName }}</a>
+    {{ if .Welcome }}
+    <div class="flash">Witamy z Braterstwa! Twoje galerie będą do Ciebie przypisane.</div>
+    {{ end }}
+    {{ if .User }}
+    <div class="user-info">
+        <span>Zalogowano jako <a href="/u/{{ .User.Slug }}">{{ .User.DisplayName }}</a></span>
         <form method="post" action="/logout" style="margin:0;">
-            <button type="submit" style="background:none;border:none;color:#888;cursor:pointer;padding:0;font:inherit;">Wyloguj</button>
+            <button type="submit">wyloguj</button>
         </form>
-        {{ else }}
-        <a href="https://braterstwo.net/sso/dajtu" style="color:#4a9eff;text-decoration:none;">Zaloguj przez Braterstwo</a>
-        {{ end }}
-    </header>
+    </div>
+    {{ end }}
     <div class="container">
         <h1>dajtu</h1>
         <p class="subtitle">Szybki hosting obrazków</p>

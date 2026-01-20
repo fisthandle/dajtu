@@ -59,7 +59,7 @@ func (h *AuthHandler) HandleBratSSO(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dbUser, err := h.db.GetOrCreateBratUser(user.Pseudonim, user.Punktacja)
+	dbUser, err := h.db.GetOrCreateBratUser(user.Pseudonim)
 	if err != nil {
 		log.Printf("SSO user error: %v", err)
 		http.Error(w, "user creation failed", http.StatusInternalServerError)
@@ -92,15 +92,14 @@ func (h *AuthHandler) HandleBratSSO(w http.ResponseWriter, r *http.Request) {
 	if strings.Contains(r.Header.Get("Accept"), "application/json") {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]any{
-			"user_id":   dbUser.ID,
-			"slug":      dbUser.Slug,
-			"name":      dbUser.DisplayName,
-			"punktacja": user.Punktacja,
+			"user_id": dbUser.ID,
+			"slug":    dbUser.Slug,
+			"name":    dbUser.DisplayName,
 		})
 		return
 	}
 
-	http.Redirect(w, r, "/u/"+dbUser.Slug, http.StatusFound)
+	http.Redirect(w, r, "/?welcome=1", http.StatusFound)
 }
 
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {

@@ -47,7 +47,8 @@ func (h *GalleryHandler) Index(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	h.indexTmpl.Execute(w, map[string]any{
-		"User": userData,
+		"User":    userData,
+		"Welcome": r.URL.Query().Get("welcome") == "1",
 	})
 }
 

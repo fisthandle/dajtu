@@ -64,9 +64,7 @@ func (h *UserHandler) View(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := map[string]any{
-		"Slug":        user.Slug,
 		"DisplayName": user.DisplayName,
-		"Punktacja":   user.BratPunktacja,
 		"Galleries":   galleryList,
 	}
 

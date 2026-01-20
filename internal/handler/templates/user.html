@@ -14,25 +14,7 @@
             padding: 40px 20px;
         }
         .container { max-width: 800px; margin: 0 auto; }
-        h1 { font-size: 2.2rem; font-weight: 300; margin-bottom: 8px; }
-        .subtitle { color: #777; margin-bottom: 30px; }
-        .card {
-            background: #1a1a1a;
-            border: 1px solid #333;
-            border-radius: 12px;
-            padding: 24px;
-            margin-bottom: 20px;
-        }
-        .row {
-            display: flex;
-            justify-content: space-between;
-            padding: 10px 0;
-            border-bottom: 1px solid #222;
-        }
-        .row:last-child { border-bottom: none; }
-        .label { color: #777; font-size: 0.9rem; }
-        .value { font-weight: 500; }
-        h2 { font-size: 1.4rem; font-weight: 400; margin: 30px 0 15px; }
+        h1 { font-size: 2.2rem; font-weight: 300; margin-bottom: 30px; }
         .gallery-list { list-style: none; }
         .gallery-item {
             background: #1a1a1a;
@@ -52,25 +34,14 @@
         .gallery-item a:hover { text-decoration: underline; }
         .gallery-date { color: #666; font-size: 0.85rem; }
         .empty { color: #666; font-style: italic; }
+        .back { color: #4a9eff; text-decoration: none; display: inline-block; margin-bottom: 20px; }
     </style>
 </head>
 <body>
     <div class="container">
+        <a href="/" class="back">&larr; Powrót</a>
         <h1>{{ .DisplayName }}</h1>
-        <p class="subtitle">Profil użytkownika</p>
 
-        <div class="card">
-            <div class="row">
-                <span class="label">Slug</span>
-                <span class="value">{{ .Slug }}</span>
-            </div>
-            <div class="row">
-                <span class="label">Punktacja</span>
-                <span class="value">{{ .Punktacja }}</span>
-            </div>
-        </div>
-
-        <h2>Galerie</h2>
         {{ if .Galleries }}
         <ul class="gallery-list">
             {{ range .Galleries }}
