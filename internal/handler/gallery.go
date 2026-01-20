@@ -18,15 +18,27 @@ import (
 var templates embed.FS
 
 type GalleryHandler struct {
-	cfg      *config.Config
-	db       *storage.DB
-	fs       *storage.Filesystem
-	template *template.Template
+	cfg           *config.Config
+	db            *storage.DB
+	fs            *storage.Filesystem
+	galleryTmpl   *template.Template
+	indexTmpl     *template.Template
 }
 
 func NewGalleryHandler(cfg *config.Config, db *storage.DB, fs *storage.Filesystem) *GalleryHandler {
-	tmpl := template.Must(template.ParseFS(templates, "templates/gallery.html"))
-	return &GalleryHandler{cfg: cfg, db: db, fs: fs, template: tmpl}
+	galleryTmpl := template.Must(template.ParseFS(templates, "templates/gallery.html"))
+	indexTmpl := template.Must(template.ParseFS(templates, "templates/index.html"))
+	return &GalleryHandler{cfg: cfg, db: db, fs: fs, galleryTmpl: galleryTmpl, indexTmpl: indexTmpl}
+}
+
+// GET / - index page with upload form
+func (h *GalleryHandler) Index(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/" {
+		http.NotFound(w, r)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	h.indexTmpl.Execute(w, nil)
 }
 
 type GalleryCreateResponse struct {
@@ -387,7 +399,7 @@ func (h *GalleryHandler) View(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	h.template.Execute(w, data)
+	h.galleryTmpl.Execute(w, data)
 }
 
 func (h *GalleryHandler) generateUniqueSlug(table string, length int) string {

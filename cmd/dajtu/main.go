@@ -37,6 +37,8 @@ func main() {
 
 	mux := http.NewServeMux()
 
+	mux.HandleFunc("/", galleryHandler.Index)
+
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		totalSize, _ := db.GetTotalSize()
 		w.Header().Set("Content-Type", "application/json")
