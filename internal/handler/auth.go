@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"dajtu/internal/auth"
 	"dajtu/internal/config"
@@ -65,6 +66,29 @@ func (h *AuthHandler) HandleBratSSO(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	session, err := h.db.CreateSession(dbUser.ID, 30)
+	if err != nil {
+		log.Printf("Session creation error: %v", err)
+		http.Error(w, "session creation failed", http.StatusInternalServerError)
+		return
+	}
+
+	maxAge := int(session.ExpiresAt - time.Now().Unix())
+	if maxAge < 0 {
+		maxAge = 0
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "session",
+		Value:    session.Token,
+		Path:     "/",
+		MaxAge:   maxAge,
+		Expires:  time.Unix(session.ExpiresAt, 0),
+		HttpOnly: true,
+		Secure:   strings.HasPrefix(h.cfg.BaseURL, "https"),
+		SameSite: http.SameSiteLaxMode,
+	})
+
 	if strings.Contains(r.Header.Get("Accept"), "application/json") {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]any{
@@ -77,4 +101,29 @@ func (h *AuthHandler) HandleBratSSO(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, "/u/"+dbUser.Slug, http.StatusFound)
+}
+
+func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	cookie, err := r.Cookie("session")
+	if err == nil && cookie.Value != "" {
+		_ = h.db.DeleteSession(cookie.Value)
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "session",
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		Expires:  time.Unix(0, 0),
+		HttpOnly: true,
+		Secure:   strings.HasPrefix(h.cfg.BaseURL, "https"),
+		SameSite: http.SameSiteLaxMode,
+	})
+
+	http.Redirect(w, r, "/", http.StatusFound)
 }

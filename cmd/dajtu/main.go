@@ -39,6 +39,7 @@ func main() {
 	}
 	userHandler := handler.NewUserHandler(cfg, db)
 	uploadLimiter := middleware.NewRateLimiter(30, time.Minute)
+	sessionMiddleware := middleware.NewSessionMiddleware(db)
 
 	mux := http.NewServeMux()
 
@@ -77,6 +78,7 @@ func main() {
 	mux.HandleFunc("/g/", galleryHandler.View)
 	mux.HandleFunc("/u/", userHandler.View)
 	mux.HandleFunc("/auth/brat/", authHandler.HandleBratSSO)
+	mux.HandleFunc("/logout", authHandler.Logout)
 
 	mux.HandleFunc("/i/", func(w http.ResponseWriter, r *http.Request) {
 		path := strings.TrimPrefix(r.URL.Path, "/i/")
@@ -117,7 +119,8 @@ func main() {
 	})
 
 	log.Printf("Starting server on :%s", cfg.Port)
-	if err := http.ListenAndServe(":"+cfg.Port, mux); err != nil {
+	handler := sessionMiddleware.Middleware(mux)
+	if err := http.ListenAndServe(":"+cfg.Port, handler); err != nil {
 		log.Fatal(err)
 	}
 }

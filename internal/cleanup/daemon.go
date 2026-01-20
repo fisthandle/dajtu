@@ -33,6 +33,12 @@ func (d *Daemon) Start() {
 }
 
 func (d *Daemon) cleanup() {
+	if deleted, err := d.db.CleanExpiredSessions(); err != nil {
+		log.Printf("cleanup: failed to clean sessions: %v", err)
+	} else if deleted > 0 {
+		log.Printf("cleanup: deleted %d expired sessions", deleted)
+	}
+
 	totalSize, err := d.db.GetTotalSize()
 	if err != nil {
 		log.Printf("cleanup: failed to get total size: %v", err)

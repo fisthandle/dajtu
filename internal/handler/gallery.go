@@ -11,6 +11,7 @@ import (
 
 	"dajtu/internal/config"
 	"dajtu/internal/image"
+	"dajtu/internal/middleware"
 	"dajtu/internal/storage"
 )
 
@@ -37,8 +38,17 @@ func (h *GalleryHandler) Index(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+	var userData map[string]any
+	if user := middleware.GetUser(r); user != nil {
+		userData = map[string]any{
+			"Slug":        user.Slug,
+			"DisplayName": user.DisplayName,
+		}
+	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	h.indexTmpl.Execute(w, nil)
+	h.indexTmpl.Execute(w, map[string]any{
+		"User": userData,
+	})
 }
 
 type GalleryCreateResponse struct {
@@ -73,11 +83,17 @@ func (h *GalleryHandler) Create(w http.ResponseWriter, r *http.Request) {
 	editToken := storage.GenerateSlug(32)
 	now := time.Now().Unix()
 
+	var userID *int64
+	if user := middleware.GetUser(r); user != nil {
+		userID = &user.ID
+	}
+
 	gallery := &storage.Gallery{
 		Slug:        gallerySlug,
 		EditToken:   editToken,
 		Title:       r.FormValue("title"),
 		Description: r.FormValue("description"),
+		UserID:      userID,
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}

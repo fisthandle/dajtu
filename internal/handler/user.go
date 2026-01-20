@@ -4,6 +4,7 @@ import (
 	"html/template"
 	"net/http"
 	"strings"
+	"time"
 
 	"dajtu/internal/config"
 	"dajtu/internal/storage"
@@ -39,10 +40,34 @@ func (h *UserHandler) View(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	galleries, _ := h.db.GetUserGalleries(user.ID)
+
+	type GalleryData struct {
+		Slug      string
+		Title     string
+		URL       string
+		CreatedAt string
+	}
+
+	var galleryList []GalleryData
+	for _, g := range galleries {
+		title := g.Title
+		if title == "" {
+			title = "Galeria " + g.Slug
+		}
+		galleryList = append(galleryList, GalleryData{
+			Slug:      g.Slug,
+			Title:     title,
+			URL:       h.cfg.BaseURL + "/g/" + g.Slug,
+			CreatedAt: time.Unix(g.CreatedAt, 0).Format("2006-01-02 15:04"),
+		})
+	}
+
 	data := map[string]any{
 		"Slug":        user.Slug,
 		"DisplayName": user.DisplayName,
 		"Punktacja":   user.BratPunktacja,
+		"Galleries":   galleryList,
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")

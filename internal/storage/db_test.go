@@ -556,3 +556,175 @@ func TestDB_Close(t *testing.T) {
 		t.Errorf("Close() error = %v", err)
 	}
 }
+
+func TestDB_CreateSession(t *testing.T) {
+	db := testDB(t)
+
+	// Create user first
+	user, err := db.GetOrCreateBratUser("testuser", 100)
+	if err != nil {
+		t.Fatalf("GetOrCreateBratUser() error = %v", err)
+	}
+
+	session, err := db.CreateSession(user.ID, 30)
+	if err != nil {
+		t.Fatalf("CreateSession() error = %v", err)
+	}
+
+	if session.Token == "" {
+		t.Error("session.Token is empty")
+	}
+	if len(session.Token) != 64 {
+		t.Errorf("session.Token length = %d, want 64", len(session.Token))
+	}
+	if session.UserID != user.ID {
+		t.Errorf("session.UserID = %d, want %d", session.UserID, user.ID)
+	}
+	if session.ExpiresAt <= time.Now().Unix() {
+		t.Error("session.ExpiresAt should be in the future")
+	}
+}
+
+func TestDB_GetSession(t *testing.T) {
+	db := testDB(t)
+
+	user, _ := db.GetOrCreateBratUser("testuser", 100)
+	session, _ := db.CreateSession(user.ID, 30)
+
+	got, err := db.GetSession(session.Token)
+	if err != nil {
+		t.Fatalf("GetSession() error = %v", err)
+	}
+	if got == nil {
+		t.Fatal("GetSession() returned nil")
+	}
+	if got.UserID != user.ID {
+		t.Errorf("GetSession().UserID = %d, want %d", got.UserID, user.ID)
+	}
+}
+
+func TestDB_GetSession_NotFound(t *testing.T) {
+	db := testDB(t)
+
+	got, err := db.GetSession("nonexistent_token")
+	if err != nil {
+		t.Fatalf("GetSession() error = %v", err)
+	}
+	if got != nil {
+		t.Error("GetSession() should return nil for nonexistent token")
+	}
+}
+
+func TestDB_GetSession_Expired(t *testing.T) {
+	db := testDB(t)
+
+	user, _ := db.GetOrCreateBratUser("testuser", 100)
+
+	// Insert expired session directly (expires_at in the past)
+	expiredToken := "expired_test_token"
+	_, err := db.conn.Exec(
+		`INSERT INTO sessions (token, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)`,
+		hashSessionToken(expiredToken), user.ID, time.Now().Unix()-3600, time.Now().Unix()-7200,
+	)
+	if err != nil {
+		t.Fatalf("insert expired session error = %v", err)
+	}
+
+	got, err := db.GetSession(expiredToken)
+	if err != nil {
+		t.Fatalf("GetSession() error = %v", err)
+	}
+	if got != nil {
+		t.Error("GetSession() should return nil for expired session")
+	}
+}
+
+func TestDB_DeleteSession(t *testing.T) {
+	db := testDB(t)
+
+	user, _ := db.GetOrCreateBratUser("testuser", 100)
+	session, _ := db.CreateSession(user.ID, 30)
+
+	err := db.DeleteSession(session.Token)
+	if err != nil {
+		t.Fatalf("DeleteSession() error = %v", err)
+	}
+
+	got, _ := db.GetSession(session.Token)
+	if got != nil {
+		t.Error("session still exists after delete")
+	}
+}
+
+func TestDB_DeleteUserSessions(t *testing.T) {
+	db := testDB(t)
+
+	user, _ := db.GetOrCreateBratUser("testuser", 100)
+
+	// Create multiple sessions
+	s1, _ := db.CreateSession(user.ID, 30)
+	s2, _ := db.CreateSession(user.ID, 30)
+
+	err := db.DeleteUserSessions(user.ID)
+	if err != nil {
+		t.Fatalf("DeleteUserSessions() error = %v", err)
+	}
+
+	got1, _ := db.GetSession(s1.Token)
+	got2, _ := db.GetSession(s2.Token)
+	if got1 != nil || got2 != nil {
+		t.Error("sessions still exist after DeleteUserSessions")
+	}
+}
+
+func TestDB_CleanExpiredSessions(t *testing.T) {
+	db := testDB(t)
+
+	user, _ := db.GetOrCreateBratUser("testuser", 100)
+
+	// Insert expired session directly (expires_at in the past)
+	_, err := db.conn.Exec(
+		`INSERT INTO sessions (token, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)`,
+		"expired_token_hash", user.ID, time.Now().Unix()-3600, time.Now().Unix()-7200,
+	)
+	if err != nil {
+		t.Fatalf("insert expired session error = %v", err)
+	}
+
+	deleted, err := db.CleanExpiredSessions()
+	if err != nil {
+		t.Fatalf("CleanExpiredSessions() error = %v", err)
+	}
+	if deleted != 1 {
+		t.Errorf("CleanExpiredSessions() deleted = %d, want 1", deleted)
+	}
+}
+
+func TestDB_GetUserByID(t *testing.T) {
+	db := testDB(t)
+
+	user, _ := db.GetOrCreateBratUser("testuser", 100)
+
+	got, err := db.GetUserByID(user.ID)
+	if err != nil {
+		t.Fatalf("GetUserByID() error = %v", err)
+	}
+	if got == nil {
+		t.Fatal("GetUserByID() returned nil")
+	}
+	if got.Slug != user.Slug {
+		t.Errorf("GetUserByID().Slug = %s, want %s", got.Slug, user.Slug)
+	}
+}
+
+func TestDB_GetUserByID_NotFound(t *testing.T) {
+	db := testDB(t)
+
+	got, err := db.GetUserByID(99999)
+	if err != nil {
+		t.Fatalf("GetUserByID() error = %v", err)
+	}
+	if got != nil {
+		t.Error("GetUserByID() should return nil for nonexistent user")
+	}
+}

@@ -137,6 +137,16 @@
     </style>
 </head>
 <body>
+    <header style="position:fixed;top:0;right:0;padding:15px 20px;display:flex;gap:15px;align-items:center;">
+        {{ if .User }}
+        <a href="/u/{{ .User.Slug }}" style="color:#4a9eff;text-decoration:none;">{{ .User.DisplayName }}</a>
+        <form method="post" action="/logout" style="margin:0;">
+            <button type="submit" style="background:none;border:none;color:#888;cursor:pointer;padding:0;font:inherit;">Wyloguj</button>
+        </form>
+        {{ else }}
+        <a href="https://braterstwo.net/sso/dajtu" style="color:#4a9eff;text-decoration:none;">Zaloguj przez Braterstwo</a>
+        {{ end }}
+    </header>
     <div class="container">
         <h1>dajtu</h1>
         <p class="subtitle">Szybki hosting obrazków</p>

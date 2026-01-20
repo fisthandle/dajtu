@@ -1,7 +1,10 @@
 package storage
 
 import (
+	"crypto/rand"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
@@ -48,6 +51,13 @@ type Gallery struct {
 	UserID      *int64
 	CreatedAt   int64
 	UpdatedAt   int64
+}
+
+type Session struct {
+	Token     string
+	UserID    int64
+	ExpiresAt int64
+	CreatedAt int64
 }
 
 func NewDB(dataDir string) (*DB, error) {
@@ -109,6 +119,14 @@ func (db *DB) migrate() error {
 		FOREIGN KEY (gallery_id) REFERENCES galleries(id) ON DELETE CASCADE
 	);
 
+	CREATE TABLE IF NOT EXISTS sessions (
+		token CHAR(64) PRIMARY KEY,
+		user_id INTEGER NOT NULL,
+		expires_at INTEGER NOT NULL,
+		created_at INTEGER NOT NULL,
+		FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+	);
+
 	CREATE INDEX IF NOT EXISTS idx_users_slug ON users(slug);
 	CREATE INDEX IF NOT EXISTS idx_images_created ON images(created_at);
 	CREATE INDEX IF NOT EXISTS idx_images_gallery ON images(gallery_id);
@@ -117,6 +135,8 @@ func (db *DB) migrate() error {
 	CREATE INDEX IF NOT EXISTS idx_galleries_slug ON galleries(slug);
 	CREATE INDEX IF NOT EXISTS idx_galleries_user ON galleries(user_id);
 	CREATE INDEX IF NOT EXISTS idx_galleries_edit ON galleries(edit_token);
+	CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
+	CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
 	`
 	if _, err := db.conn.Exec(schema); err != nil {
 		return err
@@ -227,6 +247,26 @@ func (db *DB) GetGalleryBySlug(slug string) (*Gallery, error) {
 	return g, err
 }
 
+func (db *DB) GetUserGalleries(userID int64) ([]*Gallery, error) {
+	rows, err := db.conn.Query(`
+		SELECT id, slug, edit_token, title, description, user_id, created_at, updated_at
+		FROM galleries WHERE user_id = ? ORDER BY created_at DESC`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var galleries []*Gallery
+	for rows.Next() {
+		g := &Gallery{}
+		if err := rows.Scan(&g.ID, &g.Slug, &g.EditToken, &g.Title, &g.Description, &g.UserID, &g.CreatedAt, &g.UpdatedAt); err != nil {
+			return nil, err
+		}
+		galleries = append(galleries, g)
+	}
+	return galleries, rows.Err()
+}
+
 // User functions (for V2 SSO)
 func (db *DB) InsertUser(u *User) (int64, error) {
 	res, err := db.conn.Exec(`
@@ -248,6 +288,21 @@ func (db *DB) GetUserBySlug(slug string) (*User, error) {
 			created_at,
 			COALESCE(updated_at, created_at)
 		FROM users WHERE slug = ?`, slug).Scan(&u.ID, &u.Slug, &u.DisplayName, &u.BratPseudo, &u.BratPunktacja, &u.CreatedAt, &u.UpdatedAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return u, err
+}
+
+func (db *DB) GetUserByID(id int64) (*User, error) {
+	u := &User{}
+	err := db.conn.QueryRow(`
+		SELECT id, slug, display_name,
+			COALESCE(brat_pseudo, ''),
+			COALESCE(brat_punktacja, 0),
+			created_at,
+			COALESCE(updated_at, created_at)
+		FROM users WHERE id = ?`, id).Scan(&u.ID, &u.Slug, &u.DisplayName, &u.BratPseudo, &u.BratPunktacja, &u.CreatedAt, &u.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -317,6 +372,74 @@ func generateUniqueUserSlug(db *DB, length int) (string, error) {
 		}
 	}
 	return "", errors.New("failed to generate unique user slug")
+}
+
+func (db *DB) CreateSession(userID int64, durationDays int) (*Session, error) {
+	token, err := newSessionToken()
+	if err != nil {
+		return nil, err
+	}
+	now := time.Now().Unix()
+	expiresAt := now + int64(durationDays*24*60*60)
+	tokenHash := hashSessionToken(token)
+
+	_, err = db.conn.Exec(
+		`INSERT INTO sessions (token, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)`,
+		tokenHash, userID, expiresAt, now,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Session{Token: token, UserID: userID, ExpiresAt: expiresAt, CreatedAt: now}, nil
+}
+
+func (db *DB) GetSession(token string) (*Session, error) {
+	var s Session
+	tokenHash := hashSessionToken(token)
+	err := db.conn.QueryRow(
+		`SELECT token, user_id, expires_at, created_at FROM sessions WHERE token = ? AND expires_at > ?`,
+		tokenHash, time.Now().Unix(),
+	).Scan(&s.Token, &s.UserID, &s.ExpiresAt, &s.CreatedAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &s, nil
+}
+
+func (db *DB) DeleteSession(token string) error {
+	tokenHash := hashSessionToken(token)
+	_, err := db.conn.Exec(`DELETE FROM sessions WHERE token = ?`, tokenHash)
+	return err
+}
+
+func (db *DB) DeleteUserSessions(userID int64) error {
+	_, err := db.conn.Exec(`DELETE FROM sessions WHERE user_id = ?`, userID)
+	return err
+}
+
+func (db *DB) CleanExpiredSessions() (int64, error) {
+	result, err := db.conn.Exec(`DELETE FROM sessions WHERE expires_at < ?`, time.Now().Unix())
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+func newSessionToken() (string, error) {
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b), nil
+}
+
+func hashSessionToken(token string) string {
+	sum := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(sum[:])
 }
 
 func (db *DB) GetGalleryImages(galleryID int64) ([]*Image, error) {
