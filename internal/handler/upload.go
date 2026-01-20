@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"path/filepath"
 	"time"
 
 	"dajtu/internal/config"
@@ -26,6 +27,14 @@ type UploadResponse struct {
 	Slug  string            `json:"slug"`
 	URL   string            `json:"url"`
 	Sizes map[string]string `json:"sizes"`
+}
+
+var extToMime = map[string]string{
+	".jpg":  "image/jpeg",
+	".png":  "image/png",
+	".gif":  "image/gif",
+	".webp": "image/webp",
+	".avif": "image/avif",
 }
 
 func (h *UploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -66,19 +75,30 @@ func (h *UploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Generate unique slug (5 chars for images)
+	slug := h.generateUniqueSlug("images", 5)
+
+	var originalSize int64
+	if h.cfg.KeepOriginalFormat {
+		size, err := h.fs.SaveOriginal(slug, "original", data, string(format))
+		if err != nil {
+			log.Printf("warning: failed to save original: %v", err)
+		} else {
+			originalSize = size
+		}
+	}
+
 	// Process image (re-encode + resize)
 	results, err := image.Process(data)
 	if err != nil {
 		log.Printf("process error: %v", err)
+		h.fs.Delete(slug)
 		jsonError(w, "image processing failed", http.StatusInternalServerError)
 		return
 	}
 
-	// Generate unique slug (5 chars for images)
-	slug := h.generateUniqueSlug("images", 5)
-
 	// Save all sizes
-	var totalSize int64
+	totalSize := originalSize
 	for _, res := range results {
 		if err := h.fs.Save(slug, res.Name, res.Data); err != nil {
 			log.Printf("save error: %v", err)
@@ -150,6 +170,24 @@ func (h *UploadHandler) generateUniqueSlug(table string, length int) string {
 	}
 	// Fallback: try again (extremely unlikely to reach here)
 	return h.generateUniqueSlug(table, length)
+}
+
+func (h *UploadHandler) ServeOriginal(w http.ResponseWriter, r *http.Request, slug string) {
+	path, err := h.fs.GetOriginalPath(slug, "original")
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	ext := filepath.Ext(path)
+	contentType := extToMime[ext]
+	if contentType == "" {
+		contentType = "application/octet-stream"
+	}
+
+	w.Header().Set("Content-Type", contentType)
+	w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+	http.ServeFile(w, r, path)
 }
 
 func jsonError(w http.ResponseWriter, msg string, code int) {

@@ -9,7 +9,9 @@ import (
 	"testing"
 
 	"dajtu/internal/config"
+	"dajtu/internal/image"
 	"dajtu/internal/storage"
+	"dajtu/internal/testutil"
 )
 
 func testSetup(t *testing.T) (*config.Config, *storage.DB, *storage.Filesystem, func()) {
@@ -183,5 +185,34 @@ func TestUploadHandler_GenerateUniqueSlug_Collision(t *testing.T) {
 	exists, _ := db.SlugExists("images", slug)
 	if exists {
 		t.Error("generated slug should be unique")
+	}
+}
+
+func TestUploadHandler_SavesOriginal(t *testing.T) {
+	if _, err := image.Process(testutil.SampleJPEG()); err != nil {
+		t.Skipf("image processing unavailable: %v", err)
+	}
+
+	cfg, db, fs, cleanup := testSetup(t)
+	defer cleanup()
+	cfg.KeepOriginalFormat = true
+
+	h := NewUploadHandler(cfg, db, fs)
+
+	req := createMultipartRequest(t, "file", "test.jpg", testutil.SampleJPEG())
+	rec := httptest.NewRecorder()
+
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
+
+	var resp UploadResponse
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+
+	if _, err := fs.GetOriginalPath(resp.Slug, "original"); err != nil {
+		t.Fatalf("original file not found: %v", err)
 	}
 }

@@ -2,6 +2,7 @@ package storage
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -15,10 +16,13 @@ type DB struct {
 }
 
 type User struct {
-	ID          int64
-	Slug        string
-	DisplayName string
-	CreatedAt   int64
+	ID            int64
+	Slug          string
+	DisplayName   string
+	BratPseudo    string
+	BratPunktacja int64
+	CreatedAt     int64
+	UpdatedAt     int64
 }
 
 type Image struct {
@@ -71,7 +75,10 @@ func (db *DB) migrate() error {
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		slug CHAR(6) NOT NULL UNIQUE,
 		display_name TEXT NOT NULL,
-		created_at INTEGER NOT NULL
+		brat_pseudo TEXT UNIQUE,
+		brat_punktacja INTEGER NOT NULL DEFAULT 0,
+		created_at INTEGER NOT NULL,
+		updated_at INTEGER NOT NULL DEFAULT 0
 	);
 
 	CREATE TABLE IF NOT EXISTS galleries (
@@ -111,8 +118,62 @@ func (db *DB) migrate() error {
 	CREATE INDEX IF NOT EXISTS idx_galleries_user ON galleries(user_id);
 	CREATE INDEX IF NOT EXISTS idx_galleries_edit ON galleries(edit_token);
 	`
-	_, err := db.conn.Exec(schema)
+	if _, err := db.conn.Exec(schema); err != nil {
+		return err
+	}
+	return db.ensureUserColumns()
+}
+
+func (db *DB) ensureUserColumns() error {
+	columns, err := db.userColumns()
+	if err != nil {
+		return err
+	}
+
+	if !columns["brat_pseudo"] {
+		if _, err := db.conn.Exec("ALTER TABLE users ADD COLUMN brat_pseudo TEXT"); err != nil {
+			return err
+		}
+	}
+	if !columns["brat_punktacja"] {
+		if _, err := db.conn.Exec("ALTER TABLE users ADD COLUMN brat_punktacja INTEGER NOT NULL DEFAULT 0"); err != nil {
+			return err
+		}
+	}
+	if !columns["updated_at"] {
+		if _, err := db.conn.Exec("ALTER TABLE users ADD COLUMN updated_at INTEGER NOT NULL DEFAULT 0"); err != nil {
+			return err
+		}
+	}
+
+	if _, err := db.conn.Exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_brat_pseudo ON users(brat_pseudo)"); err != nil {
+		return err
+	}
+
+	_, err = db.conn.Exec("UPDATE users SET updated_at = created_at WHERE updated_at = 0 OR updated_at IS NULL")
 	return err
+}
+
+func (db *DB) userColumns() (map[string]bool, error) {
+	rows, err := db.conn.Query("PRAGMA table_info(users)")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	cols := make(map[string]bool)
+	for rows.Next() {
+		var cid int
+		var name, ctype string
+		var notnull int
+		var dflt sql.NullString
+		var pk int
+		if err := rows.Scan(&cid, &name, &ctype, &notnull, &dflt, &pk); err != nil {
+			return nil, err
+		}
+		cols[name] = true
+	}
+	return cols, rows.Err()
 }
 
 func (db *DB) InsertImage(img *Image) (int64, error) {
@@ -169,9 +230,9 @@ func (db *DB) GetGalleryBySlug(slug string) (*Gallery, error) {
 // User functions (for V2 SSO)
 func (db *DB) InsertUser(u *User) (int64, error) {
 	res, err := db.conn.Exec(`
-		INSERT INTO users (slug, display_name, created_at)
-		VALUES (?, ?, ?)`,
-		u.Slug, u.DisplayName, u.CreatedAt)
+		INSERT INTO users (slug, display_name, created_at, updated_at)
+		VALUES (?, ?, ?, ?)`,
+		u.Slug, u.DisplayName, u.CreatedAt, u.UpdatedAt)
 	if err != nil {
 		return 0, err
 	}
@@ -181,12 +242,81 @@ func (db *DB) InsertUser(u *User) (int64, error) {
 func (db *DB) GetUserBySlug(slug string) (*User, error) {
 	u := &User{}
 	err := db.conn.QueryRow(`
-		SELECT id, slug, display_name, created_at
-		FROM users WHERE slug = ?`, slug).Scan(&u.ID, &u.Slug, &u.DisplayName, &u.CreatedAt)
+		SELECT id, slug, display_name,
+			COALESCE(brat_pseudo, ''),
+			COALESCE(brat_punktacja, 0),
+			created_at,
+			COALESCE(updated_at, created_at)
+		FROM users WHERE slug = ?`, slug).Scan(&u.ID, &u.Slug, &u.DisplayName, &u.BratPseudo, &u.BratPunktacja, &u.CreatedAt, &u.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	return u, err
+}
+
+func (db *DB) GetOrCreateBratUser(pseudonim string, punktacja int64) (*User, error) {
+	now := time.Now().Unix()
+
+	var user User
+	err := db.conn.QueryRow(`
+		SELECT id, slug, display_name,
+			COALESCE(brat_pseudo, ''),
+			COALESCE(brat_punktacja, 0),
+			created_at,
+			COALESCE(updated_at, created_at)
+		FROM users WHERE brat_pseudo = ?
+	`, pseudonim).Scan(&user.ID, &user.Slug, &user.DisplayName, &user.BratPseudo, &user.BratPunktacja, &user.CreatedAt, &user.UpdatedAt)
+	if err == nil {
+		_, err = db.conn.Exec(`
+			UPDATE users SET brat_punktacja = ?, updated_at = ? WHERE id = ?
+		`, punktacja, now, user.ID)
+		if err != nil {
+			return nil, err
+		}
+		user.BratPunktacja = punktacja
+		user.UpdatedAt = now
+		return &user, nil
+	}
+	if err != sql.ErrNoRows {
+		return nil, err
+	}
+
+	slug, err := generateUniqueUserSlug(db, 6)
+	if err != nil {
+		return nil, err
+	}
+	res, err := db.conn.Exec(`
+		INSERT INTO users (slug, display_name, brat_pseudo, brat_punktacja, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?)
+	`, slug, pseudonim, pseudonim, punktacja, now, now)
+	if err != nil {
+		return nil, err
+	}
+	id, _ := res.LastInsertId()
+
+	return &User{
+		ID:            id,
+		Slug:          slug,
+		DisplayName:   pseudonim,
+		BratPseudo:    pseudonim,
+		BratPunktacja: punktacja,
+		CreatedAt:     now,
+		UpdatedAt:     now,
+	}, nil
+}
+
+func generateUniqueUserSlug(db *DB, length int) (string, error) {
+	for i := 0; i < 20; i++ {
+		slug := GenerateSlug(length)
+		exists, err := db.SlugExists("users", slug)
+		if err != nil {
+			return "", err
+		}
+		if !exists {
+			return slug, nil
+		}
+	}
+	return "", errors.New("failed to generate unique user slug")
 }
 
 func (db *DB) GetGalleryImages(galleryID int64) ([]*Image, error) {

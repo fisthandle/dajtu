@@ -6,11 +6,22 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type Filesystem struct {
 	baseDir string
 }
+
+var mimeToExt = map[string]string{
+	"image/jpeg": ".jpg",
+	"image/png":  ".png",
+	"image/gif":  ".gif",
+	"image/webp": ".webp",
+	"image/avif": ".avif",
+}
+
+var originalExts = []string{".jpg", ".png", ".gif", ".webp", ".avif"}
 
 func NewFilesystem(baseDir string) (*Filesystem, error) {
 	imagesDir := filepath.Join(baseDir, "images")
@@ -57,6 +68,49 @@ func (fs *Filesystem) Save(slug, sizeName string, data []byte) error {
 	}
 
 	return nil
+}
+
+func (fs *Filesystem) SaveOriginal(slug, name string, data []byte, mimeType string) (int64, error) {
+	ext, ok := mimeToExt[mimeType]
+	if !ok {
+		return 0, fmt.Errorf("unsupported mime type: %s", mimeType)
+	}
+
+	dir := fs.DirPath(slug)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return 0, fmt.Errorf("create dir: %w", err)
+	}
+
+	name = sanitizeOriginalName(name)
+	filename := "orig_" + name + ext
+	path := filepath.Join(dir, filename)
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		return 0, fmt.Errorf("write file: %w", err)
+	}
+	return int64(len(data)), nil
+}
+
+func (fs *Filesystem) GetOriginalPath(slug, name string) (string, error) {
+	dir := fs.DirPath(slug)
+	name = sanitizeOriginalName(name)
+
+	for _, ext := range originalExts {
+		path := filepath.Join(dir, "orig_"+name+ext)
+		if _, err := os.Stat(path); err == nil {
+			return path, nil
+		}
+	}
+	return "", os.ErrNotExist
+}
+
+func sanitizeOriginalName(name string) string {
+	name = strings.TrimSpace(name)
+	name = strings.ReplaceAll(name, "/", "_")
+	name = strings.ReplaceAll(name, "\\", "_")
+	if name == "" {
+		return "original"
+	}
+	return name
 }
 
 func (fs *Filesystem) Delete(slug string) error {

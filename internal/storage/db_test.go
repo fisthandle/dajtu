@@ -217,6 +217,7 @@ func TestDB_InsertUser(t *testing.T) {
 		Slug:        "user01",
 		DisplayName: "Test User",
 		CreatedAt:   time.Now().Unix(),
+		UpdatedAt:   time.Now().Unix(),
 	}
 
 	id, err := db.InsertUser(u)
@@ -235,6 +236,7 @@ func TestDB_GetUserBySlug(t *testing.T) {
 		Slug:        "getu01",
 		DisplayName: "Found User",
 		CreatedAt:   time.Now().Unix(),
+		UpdatedAt:   time.Now().Unix(),
 	}
 	db.InsertUser(u)
 
@@ -259,6 +261,42 @@ func TestDB_GetUserBySlug_NotFound(t *testing.T) {
 	}
 	if got != nil {
 		t.Errorf("GetUserBySlug(nonexistent) = %v, want nil", got)
+	}
+}
+
+func TestDB_GetOrCreateBratUser_New(t *testing.T) {
+	db := testDB(t)
+
+	user, err := db.GetOrCreateBratUser("testuser", 1000)
+	if err != nil {
+		t.Fatalf("GetOrCreateBratUser failed: %v", err)
+	}
+	if user.DisplayName != "testuser" {
+		t.Errorf("DisplayName = %q, want %q", user.DisplayName, "testuser")
+	}
+	if user.BratPunktacja != 1000 {
+		t.Errorf("BratPunktacja = %d, want %d", user.BratPunktacja, 1000)
+	}
+	if user.Slug == "" {
+		t.Error("Slug should not be empty")
+	}
+}
+
+func TestDB_GetOrCreateBratUser_Existing(t *testing.T) {
+	db := testDB(t)
+
+	user1, _ := db.GetOrCreateBratUser("testuser", 500)
+
+	user2, err := db.GetOrCreateBratUser("testuser", 1500)
+	if err != nil {
+		t.Fatalf("GetOrCreateBratUser failed: %v", err)
+	}
+
+	if user2.ID != user1.ID {
+		t.Errorf("should return same user, got ID %d, want %d", user2.ID, user1.ID)
+	}
+	if user2.BratPunktacja != 1500 {
+		t.Errorf("BratPunktacja should update, got %d, want %d", user2.BratPunktacja, 1500)
 	}
 }
 

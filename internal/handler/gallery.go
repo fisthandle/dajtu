@@ -18,11 +18,11 @@ import (
 var templates embed.FS
 
 type GalleryHandler struct {
-	cfg           *config.Config
-	db            *storage.DB
-	fs            *storage.Filesystem
-	galleryTmpl   *template.Template
-	indexTmpl     *template.Template
+	cfg         *config.Config
+	db          *storage.DB
+	fs          *storage.Filesystem
+	galleryTmpl *template.Template
+	indexTmpl   *template.Template
 }
 
 func NewGalleryHandler(cfg *config.Config, db *storage.DB, fs *storage.Filesystem) *GalleryHandler {
@@ -109,14 +109,25 @@ func (h *GalleryHandler) Create(w http.ResponseWriter, r *http.Request) {
 			continue // skip invalid files
 		}
 
+		slug := h.generateUniqueSlug("images", 5)
+
+		var originalSize int64
+		if h.cfg.KeepOriginalFormat {
+			size, err := h.fs.SaveOriginal(slug, "original", data, string(format))
+			if err != nil {
+				log.Printf("warning: failed to save original: %v", err)
+			} else {
+				originalSize = size
+			}
+		}
+
 		results, err := image.Process(data)
 		if err != nil {
+			h.fs.Delete(slug)
 			continue
 		}
 
-		slug := h.generateUniqueSlug("images", 5)
-
-		var totalSize int64
+		totalSize := originalSize
 		for _, res := range results {
 			if err := h.fs.Save(slug, res.Name, res.Data); err != nil {
 				h.fs.Delete(slug)
@@ -242,14 +253,25 @@ func (h *GalleryHandler) AddImages(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
+		slug := h.generateUniqueSlug("images", 5)
+
+		var originalSize int64
+		if h.cfg.KeepOriginalFormat {
+			size, err := h.fs.SaveOriginal(slug, "original", data, string(format))
+			if err != nil {
+				log.Printf("warning: failed to save original: %v", err)
+			} else {
+				originalSize = size
+			}
+		}
+
 		results, err := image.Process(data)
 		if err != nil {
+			h.fs.Delete(slug)
 			continue
 		}
 
-		slug := h.generateUniqueSlug("images", 5)
-
-		var totalSize int64
+		totalSize := originalSize
 		for _, res := range results {
 			if err := h.fs.Save(slug, res.Name, res.Data); err != nil {
 				h.fs.Delete(slug)

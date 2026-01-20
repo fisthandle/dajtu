@@ -33,6 +33,11 @@ func main() {
 
 	uploadHandler := handler.NewUploadHandler(cfg, db, fs)
 	galleryHandler := handler.NewGalleryHandler(cfg, db, fs)
+	authHandler, err := handler.NewAuthHandler(cfg, db)
+	if err != nil {
+		log.Fatalf("Failed to init SSO: %v", err)
+	}
+	userHandler := handler.NewUserHandler(cfg, db)
 	uploadLimiter := middleware.NewRateLimiter(30, time.Minute)
 
 	mux := http.NewServeMux()
@@ -70,6 +75,8 @@ func main() {
 	})
 
 	mux.HandleFunc("/g/", galleryHandler.View)
+	mux.HandleFunc("/u/", userHandler.View)
+	mux.HandleFunc("/auth/brat/", authHandler.HandleBratSSO)
 
 	mux.HandleFunc("/i/", func(w http.ResponseWriter, r *http.Request) {
 		path := strings.TrimPrefix(r.URL.Path, "/i/")
@@ -79,10 +86,19 @@ func main() {
 			http.NotFound(w, r)
 			return
 		}
+		if len(parts) > 2 {
+			http.NotFound(w, r)
+			return
+		}
 
 		slug := strings.TrimSuffix(parts[0], ".webp")
 		if len(slug) < 2 {
 			http.NotFound(w, r)
+			return
+		}
+
+		if len(parts) == 2 && parts[1] == "original" {
+			uploadHandler.ServeOriginal(w, r, slug)
 			return
 		}
 

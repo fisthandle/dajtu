@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dajtu.com - Profil użytkownika</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: #111;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            max-width: 600px;
+            width: 100%;
+            padding: 40px 20px;
+        }
+        h1 {
+            font-size: 2.2rem;
+            font-weight: 300;
+            margin-bottom: 8px;
+        }
+        .subtitle {
+            color: #777;
+            margin-bottom: 30px;
+        }
+        .card {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 24px;
+        }
+        .row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #222;
+        }
+        .row:last-child { border-bottom: none; }
+        .label {
+            color: #777;
+            font-size: 0.9rem;
+        }
+        .value {
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>{{ .DisplayName }}</h1>
+        <p class="subtitle">Profil użytkownika</p>
+        <div class="card">
+            <div class="row">
+                <span class="label">Slug</span>
+                <span class="value">{{ .Slug }}</span>
+            </div>
+            <div class="row">
+                <span class="label">Punktacja</span>
+                <span class="value">{{ .Punktacja }}</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

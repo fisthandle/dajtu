@@ -47,12 +47,13 @@ func TestFilesystem(t *testing.T) (*storage.Filesystem, string) {
 func TestConfig(t *testing.T) *config.Config {
 	t.Helper()
 	return &config.Config{
-		Port:          "8080",
-		DataDir:       t.TempDir(),
-		MaxFileSizeMB: 10,
-		MaxDiskGB:     1.0,
-		CleanupTarget: 0.5,
-		BaseURL:       "http://localhost:8080",
+		Port:               "8080",
+		DataDir:            t.TempDir(),
+		MaxFileSizeMB:      10,
+		MaxDiskGB:          1.0,
+		CleanupTarget:      0.5,
+		BaseURL:            "http://localhost:8080",
+		KeepOriginalFormat: true,
 	}
 }
 

@@ -2917,3 +2917,16 @@ Key testing areas:
 - HTTP handler error cases
 - Edit token verification
 - Cascade deletions
+
+---
+
+## Addendum: SSO + Original Formats (2026-01-20)
+
+**SSO tests:**
+- `internal/auth/brat_test.go`: invalid config, invalid base64, valid payload roundtrip.
+- `internal/handler/auth_test.go`: missing data -> 400, SSO disabled -> 503.
+- `internal/storage/db_test.go`: `GetOrCreateBratUser` (new + existing).
+
+**Original formats tests:**
+- `internal/storage/filesystem_test.go`: `SaveOriginal` JPEG/PNG + `GetOriginalPath`.
+- `internal/handler/upload_test.go`: `TestUploadHandler_SavesOriginal` (skip if processing unavailable).
