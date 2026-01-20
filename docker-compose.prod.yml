@@ -1,0 +1,24 @@
+# Production overrides
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+services:
+  app:
+    ports: []  # Remove port exposure (use reverse proxy)
+    environment:
+      - BASE_URL=https://dajtu.com
+      - MAX_DISK_GB=50
+      - CLEANUP_TARGET_GB=45
+    networks:
+      - web
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+networks:
+  web:
+    external: true

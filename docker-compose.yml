@@ -2,19 +2,15 @@ services:
   app:
     build: .
     container_name: dajtu_app
+    ports:
+      - "8080:8080"
     environment:
       - PORT=8080
       - DATA_DIR=/data
-      - BASE_URL=https://dajtu.com
+      - BASE_URL=http://localhost:8080
       - MAX_FILE_SIZE_MB=20
-      - MAX_DISK_GB=50
-      - CLEANUP_TARGET_GB=45
+      - MAX_DISK_GB=10
+      - CLEANUP_TARGET_GB=8
     volumes:
       - ./data:/data
-    networks:
-      - web
     restart: unless-stopped
-
-networks:
-  web:
-    external: true
