@@ -11,6 +11,7 @@ type Config struct {
 	MaxFileSizeMB  int
 	MaxDiskGB      float64
 	CleanupTarget  float64
+	BaseURL        string
 }
 
 func Load() *Config {
@@ -20,6 +21,7 @@ func Load() *Config {
 		MaxFileSizeMB: getEnvInt("MAX_FILE_SIZE_MB", 20),
 		MaxDiskGB:     getEnvFloat("MAX_DISK_GB", 50.0),
 		CleanupTarget: getEnvFloat("CLEANUP_TARGET_GB", 45.0),
+		BaseURL:       getEnv("BASE_URL", ""),
 	}
 }
 
