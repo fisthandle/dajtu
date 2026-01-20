@@ -19,19 +19,42 @@
             grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
             gap: 10px;
         }
-        .gallery a {
-            display: block;
+        .gallery-item {
+            position: relative;
             aspect-ratio: 1;
             overflow: hidden;
             border-radius: 4px;
         }
-        .gallery img {
+        .gallery-item a {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        .gallery-item img {
             width: 100%;
             height: 100%;
             object-fit: cover;
             transition: transform 0.2s;
         }
-        .gallery a:hover img { transform: scale(1.05); }
+        .gallery-item:hover img { transform: scale(1.05); }
+        .delete-btn {
+            display: none;
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 28px;
+            height: 28px;
+            border: none;
+            border-radius: 50%;
+            background: rgba(255,60,60,0.9);
+            color: #fff;
+            font-size: 18px;
+            line-height: 1;
+            cursor: pointer;
+            z-index: 10;
+        }
+        .edit-mode .delete-btn { display: block; }
+        .delete-btn:hover { background: #ff2020; }
         .lightbox {
             display: none;
             position: fixed;
@@ -51,34 +74,193 @@
             color: #fff;
             cursor: pointer;
         }
+        .edit-panel {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #1a1a1a;
+            border-radius: 8px;
+        }
+        .edit-panel summary {
+            cursor: pointer;
+            color: #888;
+            font-size: 0.9rem;
+        }
+        .edit-panel[open] summary { margin-bottom: 15px; }
+        .token-form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .token-form input {
+            flex: 1;
+            padding: 10px 12px;
+            border: 1px solid #333;
+            border-radius: 6px;
+            background: #222;
+            color: #fff;
+            font-size: 0.9rem;
+        }
+        .token-form input:focus { outline: none; border-color: #4a9eff; }
+        .token-form button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            background: #333;
+            color: #fff;
+            cursor: pointer;
+        }
+        .token-form button:hover { background: #444; }
+        .add-form {
+            display: none;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #333;
+        }
+        .edit-mode .add-form { display: block; }
+        .add-form input[type="file"] { display: none; }
+        .add-form label {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #4a9eff;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .add-form label:hover { background: #3a8eef; }
+        .edit-status {
+            display: none;
+            color: #4a9eff;
+            font-size: 0.85rem;
+            margin-top: 10px;
+        }
+        .edit-mode .edit-status { display: block; }
     </style>
 </head>
 <body>
     <div class="container">
         {{if .Title}}<h1>{{.Title}}</h1>{{end}}
-        <div class="gallery">
+
+        <details class="edit-panel" id="editPanel" {{if .EditMode}}open{{end}}>
+            <summary>Edycja galerii</summary>
+            <form class="token-form" id="tokenForm">
+                <input type="text" id="tokenInput" placeholder="Wklej edit token..." value="{{.EditToken}}">
+                <button type="submit">Odblokuj</button>
+            </form>
+            <div class="add-form">
+                <label>
+                    + Dodaj obrazki
+                    <input type="file" id="addFiles" multiple accept="image/*">
+                </label>
+            </div>
+            <p class="edit-status">Tryb edycji aktywny - kliknij X na obrazku żeby usunąć</p>
+        </details>
+
+        <div class="gallery" id="gallery">
             {{range .Images}}
-            <a href="{{.URL}}" data-lightbox>
-                <img src="{{.ThumbURL}}" alt="" loading="lazy">
-            </a>
+            <div class="gallery-item" data-slug="{{.Slug}}">
+                <button class="delete-btn" title="Usuń">&times;</button>
+                <a href="{{.URL}}" data-lightbox>
+                    <img src="{{.ThumbURL}}" alt="" loading="lazy">
+                </a>
+            </div>
             {{end}}
         </div>
     </div>
+
     <div class="lightbox" id="lightbox">
         <span class="lightbox-close">&times;</span>
         <img src="" alt="">
     </div>
+
     <script>
+        const gallerySlug = '{{.Slug}}';
+        const container = document.querySelector('.container');
+        const tokenForm = document.getElementById('tokenForm');
+        const tokenInput = document.getElementById('tokenInput');
+        const addFiles = document.getElementById('addFiles');
+        const gallery = document.getElementById('gallery');
         const lightbox = document.getElementById('lightbox');
         const lightboxImg = lightbox.querySelector('img');
+
+        // Check URL for token
+        const params = new URLSearchParams(location.search);
+        if (params.get('edit')) {
+            tokenInput.value = params.get('edit');
+            enableEditMode();
+        }
+
+        function enableEditMode() {
+            container.classList.add('edit-mode');
+            // Update URL with token
+            const url = new URL(location.href);
+            url.searchParams.set('edit', tokenInput.value);
+            history.replaceState(null, '', url);
+        }
+
+        tokenForm.addEventListener('submit', e => {
+            e.preventDefault();
+            if (tokenInput.value.trim()) {
+                enableEditMode();
+            }
+        });
+
+        // Lightbox
         document.querySelectorAll('[data-lightbox]').forEach(a => {
             a.addEventListener('click', e => {
+                if (container.classList.contains('edit-mode')) return; // disable in edit mode
                 e.preventDefault();
                 lightboxImg.src = a.href;
                 lightbox.classList.add('active');
             });
         });
         lightbox.addEventListener('click', () => lightbox.classList.remove('active'));
+
+        // Delete image
+        gallery.addEventListener('click', async e => {
+            if (!e.target.classList.contains('delete-btn')) return;
+            if (!confirm('Usunąć ten obrazek?')) return;
+
+            const item = e.target.closest('.gallery-item');
+            const imgSlug = item.dataset.slug;
+            const token = tokenInput.value;
+
+            const res = await fetch(`/gallery/${gallerySlug}/${imgSlug}`, {
+                method: 'DELETE',
+                headers: { 'X-Edit-Token': token }
+            });
+
+            if (res.ok) {
+                item.remove();
+            } else {
+                const data = await res.json();
+                alert('Błąd: ' + (data.error || 'Nieznany błąd'));
+            }
+        });
+
+        // Add images
+        addFiles.addEventListener('change', async () => {
+            const files = addFiles.files;
+            if (!files.length) return;
+
+            const formData = new FormData();
+            [...files].forEach(f => formData.append('files', f));
+
+            const token = tokenInput.value;
+            const res = await fetch(`/gallery/${gallerySlug}/add`, {
+                method: 'POST',
+                headers: { 'X-Edit-Token': token },
+                body: formData
+            });
+
+            const data = await res.json();
+            if (data.error) {
+                alert('Błąd: ' + data.error);
+            } else {
+                // Reload to show new images
+                location.reload();
+            }
+
+            addFiles.value = '';
+        });
     </script>
 </body>
 </html>

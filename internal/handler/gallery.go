@@ -391,11 +391,18 @@ func (h *GalleryHandler) View(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
+	// Check for edit token in URL
+	editToken := r.URL.Query().Get("edit")
+	editMode := editToken != "" && editToken == gallery.EditToken
+
 	data := map[string]any{
 		"Title":       gallery.Title,
 		"Description": gallery.Description,
 		"Images":      imageData,
 		"BaseURL":     baseURL,
+		"Slug":        gallery.Slug,
+		"EditToken":   editToken,
+		"EditMode":    editMode,
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
