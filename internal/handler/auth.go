@@ -42,7 +42,7 @@ func (h *AuthHandler) HandleBratSSO(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	path := strings.TrimPrefix(r.URL.Path, "/auth/brat/")
+	path := strings.TrimPrefix(r.URL.Path, "/brrrt/")
 	data := strings.TrimSuffix(path, "/")
 	if data == "" {
 		data = r.URL.Query().Get("data")

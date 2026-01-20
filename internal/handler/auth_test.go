@@ -27,7 +27,7 @@ func TestAuthHandler_MissingData(t *testing.T) {
 		t.Fatalf("NewAuthHandler error: %v", err)
 	}
 
-	req := httptest.NewRequest("GET", "/auth/brat/", nil)
+	req := httptest.NewRequest("GET", "/brrrt/", nil)
 	w := httptest.NewRecorder()
 
 	h.HandleBratSSO(w, req)
@@ -46,7 +46,7 @@ func TestAuthHandler_SSODisabled(t *testing.T) {
 		t.Fatalf("NewAuthHandler error: %v", err)
 	}
 
-	req := httptest.NewRequest("GET", "/auth/brat/somedata", nil)
+	req := httptest.NewRequest("GET", "/brrrt/somedata", nil)
 	w := httptest.NewRecorder()
 
 	h.HandleBratSSO(w, req)

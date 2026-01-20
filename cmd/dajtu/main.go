@@ -77,7 +77,7 @@ func main() {
 
 	mux.HandleFunc("/g/", galleryHandler.View)
 	mux.HandleFunc("/u/", userHandler.View)
-	mux.HandleFunc("/auth/brat/", authHandler.HandleBratSSO)
+	mux.HandleFunc("/brrrt/", authHandler.HandleBratSSO)
 	mux.HandleFunc("/logout", authHandler.Logout)
 
 	mux.HandleFunc("/i/", func(w http.ResponseWriter, r *http.Request) {
