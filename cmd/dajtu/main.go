@@ -69,6 +69,32 @@ func main() {
 
 	mux.HandleFunc("/g/", galleryHandler.View)
 
+	mux.HandleFunc("/i/", func(w http.ResponseWriter, r *http.Request) {
+		path := strings.TrimPrefix(r.URL.Path, "/i/")
+		parts := strings.Split(path, "/")
+
+		if len(parts) == 0 || parts[0] == "" {
+			http.NotFound(w, r)
+			return
+		}
+
+		slug := strings.TrimSuffix(parts[0], ".webp")
+		if len(slug) < 2 {
+			http.NotFound(w, r)
+			return
+		}
+
+		prefix := slug[:2]
+		size := "original.webp"
+
+		if len(parts) == 2 {
+			size = parts[1]
+		}
+
+		filePath := cfg.DataDir + "/images/" + prefix + "/" + slug + "/" + size
+		http.ServeFile(w, r, filePath)
+	})
+
 	log.Printf("Starting server on :%s", cfg.Port)
 	if err := http.ListenAndServe(":"+cfg.Port, mux); err != nil {
 		log.Fatal(err)
