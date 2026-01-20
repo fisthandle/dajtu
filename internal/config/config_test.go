@@ -13,6 +13,15 @@ func TestLoad_Defaults(t *testing.T) {
 	os.Unsetenv("MAX_DISK_GB")
 	os.Unsetenv("CLEANUP_TARGET_GB")
 	os.Unsetenv("BASE_URL")
+	os.Unsetenv("KEEP_ORIGINAL_FORMAT")
+	os.Unsetenv("BRAT_HASH_SECRET")
+	os.Unsetenv("BRAT_ENCRYPTION_KEY")
+	os.Unsetenv("BRAT_ENCRYPTION_IV")
+	os.Unsetenv("BRAT_CIPHER")
+	os.Unsetenv("BRAT_MAX_SKEW_SECONDS")
+	os.Unsetenv("BRAT_HASH_LENGTH")
+	os.Unsetenv("BRAT_HASH_BYTES")
+	os.Unsetenv("BRAT_MAX_PSEUDONIM_BYTES")
 
 	cfg := Load()
 
@@ -34,6 +43,24 @@ func TestLoad_Defaults(t *testing.T) {
 	if cfg.BaseURL != "" {
 		t.Errorf("BaseURL = %q, want empty", cfg.BaseURL)
 	}
+	if !cfg.KeepOriginalFormat {
+		t.Errorf("KeepOriginalFormat = %v, want true", cfg.KeepOriginalFormat)
+	}
+	if cfg.BratCipher != "AES-256-CBC" {
+		t.Errorf("BratCipher = %q, want %q", cfg.BratCipher, "AES-256-CBC")
+	}
+	if cfg.BratMaxSkewSeconds != 600 {
+		t.Errorf("BratMaxSkewSeconds = %d, want 600", cfg.BratMaxSkewSeconds)
+	}
+	if cfg.BratHashLength != 10 {
+		t.Errorf("BratHashLength = %d, want 10", cfg.BratHashLength)
+	}
+	if cfg.BratHashBytes != 5 {
+		t.Errorf("BratHashBytes = %d, want 5", cfg.BratHashBytes)
+	}
+	if cfg.BratMaxPseudonimBytes != 255 {
+		t.Errorf("BratMaxPseudonimBytes = %d, want 255", cfg.BratMaxPseudonimBytes)
+	}
 }
 
 func TestLoad_FromEnv(t *testing.T) {
@@ -43,6 +70,15 @@ func TestLoad_FromEnv(t *testing.T) {
 	os.Setenv("MAX_DISK_GB", "100.5")
 	os.Setenv("CLEANUP_TARGET_GB", "90.0")
 	os.Setenv("BASE_URL", "https://example.com")
+	os.Setenv("KEEP_ORIGINAL_FORMAT", "0")
+	os.Setenv("BRAT_HASH_SECRET", "test_hash_secret")
+	os.Setenv("BRAT_ENCRYPTION_KEY", "test_encryption_key")
+	os.Setenv("BRAT_ENCRYPTION_IV", "1234567890123456")
+	os.Setenv("BRAT_CIPHER", "AES-256-CBC")
+	os.Setenv("BRAT_MAX_SKEW_SECONDS", "900")
+	os.Setenv("BRAT_HASH_LENGTH", "12")
+	os.Setenv("BRAT_HASH_BYTES", "6")
+	os.Setenv("BRAT_MAX_PSEUDONIM_BYTES", "128")
 	defer func() {
 		os.Unsetenv("PORT")
 		os.Unsetenv("DATA_DIR")
@@ -50,6 +86,15 @@ func TestLoad_FromEnv(t *testing.T) {
 		os.Unsetenv("MAX_DISK_GB")
 		os.Unsetenv("CLEANUP_TARGET_GB")
 		os.Unsetenv("BASE_URL")
+		os.Unsetenv("KEEP_ORIGINAL_FORMAT")
+		os.Unsetenv("BRAT_HASH_SECRET")
+		os.Unsetenv("BRAT_ENCRYPTION_KEY")
+		os.Unsetenv("BRAT_ENCRYPTION_IV")
+		os.Unsetenv("BRAT_CIPHER")
+		os.Unsetenv("BRAT_MAX_SKEW_SECONDS")
+		os.Unsetenv("BRAT_HASH_LENGTH")
+		os.Unsetenv("BRAT_HASH_BYTES")
+		os.Unsetenv("BRAT_MAX_PSEUDONIM_BYTES")
 	}()
 
 	cfg := Load()
@@ -72,6 +117,30 @@ func TestLoad_FromEnv(t *testing.T) {
 	if cfg.BaseURL != "https://example.com" {
 		t.Errorf("BaseURL = %q, want %q", cfg.BaseURL, "https://example.com")
 	}
+	if cfg.KeepOriginalFormat {
+		t.Errorf("KeepOriginalFormat = %v, want false", cfg.KeepOriginalFormat)
+	}
+	if cfg.BratHashSecret != "test_hash_secret" {
+		t.Errorf("BratHashSecret = %q, want %q", cfg.BratHashSecret, "test_hash_secret")
+	}
+	if cfg.BratEncryptionKey != "test_encryption_key" {
+		t.Errorf("BratEncryptionKey = %q, want %q", cfg.BratEncryptionKey, "test_encryption_key")
+	}
+	if cfg.BratEncryptionIV != "1234567890123456" {
+		t.Errorf("BratEncryptionIV = %q, want %q", cfg.BratEncryptionIV, "1234567890123456")
+	}
+	if cfg.BratMaxSkewSeconds != 900 {
+		t.Errorf("BratMaxSkewSeconds = %d, want 900", cfg.BratMaxSkewSeconds)
+	}
+	if cfg.BratHashLength != 12 {
+		t.Errorf("BratHashLength = %d, want 12", cfg.BratHashLength)
+	}
+	if cfg.BratHashBytes != 6 {
+		t.Errorf("BratHashBytes = %d, want 6", cfg.BratHashBytes)
+	}
+	if cfg.BratMaxPseudonimBytes != 128 {
+		t.Errorf("BratMaxPseudonimBytes = %d, want 128", cfg.BratMaxPseudonimBytes)
+	}
 }
 
 func TestGetEnvInt_InvalidValue(t *testing.T) {
@@ -91,5 +160,40 @@ func TestGetEnvFloat_InvalidValue(t *testing.T) {
 	result := getEnvFloat("TEST_FLOAT", 3.14)
 	if result != 3.14 {
 		t.Errorf("getEnvFloat with invalid value = %f, want fallback %f", result, 3.14)
+	}
+}
+
+func TestLoad_CleanupTargetValidation(t *testing.T) {
+	// Set invalid values: CleanupTarget >= MaxDiskGB
+	os.Setenv("MAX_DISK_GB", "50")
+	os.Setenv("CLEANUP_TARGET_GB", "60") // Invalid: greater than max
+	defer func() {
+		os.Unsetenv("MAX_DISK_GB")
+		os.Unsetenv("CLEANUP_TARGET_GB")
+	}()
+
+	cfg := Load()
+
+	// Should auto-correct to 90% of MaxDiskGB
+	expected := 50.0 * 0.9
+	if cfg.CleanupTarget != expected {
+		t.Errorf("CleanupTarget = %v, want %v (90%% of MaxDiskGB)", cfg.CleanupTarget, expected)
+	}
+}
+
+func TestLoad_CleanupTargetValidation_Equal(t *testing.T) {
+	// Set CleanupTarget equal to MaxDiskGB (also invalid)
+	os.Setenv("MAX_DISK_GB", "50")
+	os.Setenv("CLEANUP_TARGET_GB", "50")
+	defer func() {
+		os.Unsetenv("MAX_DISK_GB")
+		os.Unsetenv("CLEANUP_TARGET_GB")
+	}()
+
+	cfg := Load()
+
+	expected := 50.0 * 0.9
+	if cfg.CleanupTarget != expected {
+		t.Errorf("CleanupTarget = %v, want %v (90%% of MaxDiskGB)", cfg.CleanupTarget, expected)
 	}
 }
