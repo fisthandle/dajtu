@@ -91,6 +91,9 @@ func main() {
 			size = parts[1]
 		}
 
+		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		w.Header().Set("Content-Type", "image/webp")
+
 		filePath := cfg.DataDir + "/images/" + prefix + "/" + slug + "/" + size
 		http.ServeFile(w, r, filePath)
 	})
