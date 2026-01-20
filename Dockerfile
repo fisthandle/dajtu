@@ -1,4 +1,4 @@
-FROM golang:1.21-bookworm AS builder
+FROM golang:1.22-bookworm AS builder
 
 # Install libvips
 RUN apt-get update && apt-get install -y libvips-dev && rm -rf /var/lib/apt/lists/*
