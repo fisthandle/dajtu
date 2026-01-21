@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - dajtu</title>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background: #f9f9f9; }
+        nav { margin-bottom: 20px; padding: 10px; background: #333; border-radius: 8px; }
+        nav a { color: white; margin-right: 15px; text-decoration: none; }
+        nav a:hover { text-decoration: underline; }
+        .stat { display: inline-block; padding: 20px 30px; margin: 10px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center; }
+        .stat-value { font-size: 2.5em; font-weight: bold; color: #333; }
+        .stat-label { color: #666; margin-top: 5px; }
+        h1 { color: #333; }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="/admin">Dashboard</a>
+        <a href="/admin/users">Konta</a>
+        <a href="/admin/galleries">Galerie</a>
+        <a href="/admin/images">Zdjęcia</a>
+        <a href="/" style="float:right;">← Powrót</a>
+    </nav>
+    <h1>Dashboard</h1>
+    <div>
+        <div class="stat">
+            <div class="stat-value">{{.TotalImages}}</div>
+            <div class="stat-label">Zdjęć</div>
+        </div>
+        <div class="stat">
+            <div class="stat-value">{{.TotalGalleries}}</div>
+            <div class="stat-label">Galerii</div>
+        </div>
+        <div class="stat">
+            <div class="stat-value">{{.TotalUsers}}</div>
+            <div class="stat-label">Użytkowników</div>
+        </div>
+        <div class="stat">
+            <div class="stat-value">{{printf "%.2f" (divf .DiskUsageBytes 1073741824)}} GB</div>
+            <div class="stat-label">Zajęte miejsce</div>
+        </div>
+    </div>
+</body>
+</html>

@@ -9,9 +9,12 @@ import (
 )
 
 type AdminHandler struct {
-	db   *storage.DB
-	fs   *storage.Filesystem
-	tmpl *template.Template
+	db            *storage.DB
+	fs            *storage.Filesystem
+	dashboardTmpl *template.Template
+	usersTmpl     *template.Template
+	galleriesTmpl *template.Template
+	imagesTmpl    *template.Template
 }
 
 func NewAdminHandler(db *storage.DB, fs *storage.Filesystem) *AdminHandler {
@@ -24,9 +27,12 @@ func NewAdminHandler(db *storage.DB, fs *storage.Filesystem) *AdminHandler {
 		},
 	}
 	return &AdminHandler{
-		db:   db,
-		fs:   fs,
-		tmpl: template.Must(template.New("").Funcs(funcMap).ParseGlob("templates/admin/*.html")),
+		db:            db,
+		fs:            fs,
+		dashboardTmpl: template.Must(template.New("dashboard").Funcs(funcMap).ParseFS(templates, "templates/admin/dashboard.html")),
+		usersTmpl:     template.Must(template.New("users").ParseFS(templates, "templates/admin/users.html")),
+		galleriesTmpl: template.Must(template.New("galleries").ParseFS(templates, "templates/admin/galleries.html")),
+		imagesTmpl:    template.Must(template.New("images").Funcs(funcMap).ParseFS(templates, "templates/admin/images.html")),
 	}
 }
 
@@ -36,7 +42,7 @@ func (h *AdminHandler) Dashboard(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 500)
 		return
 	}
-	h.tmpl.ExecuteTemplate(w, "dashboard.html", stats)
+	h.dashboardTmpl.ExecuteTemplate(w, "dashboard.html", stats)
 }
 
 func (h *AdminHandler) Users(w http.ResponseWriter, r *http.Request) {
@@ -45,7 +51,7 @@ func (h *AdminHandler) Users(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 500)
 		return
 	}
-	h.tmpl.ExecuteTemplate(w, "users.html", users)
+	h.usersTmpl.ExecuteTemplate(w, "users.html", users)
 }
 
 func (h *AdminHandler) Galleries(w http.ResponseWriter, r *http.Request) {
@@ -54,7 +60,7 @@ func (h *AdminHandler) Galleries(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 500)
 		return
 	}
-	h.tmpl.ExecuteTemplate(w, "galleries.html", galleries)
+	h.galleriesTmpl.ExecuteTemplate(w, "galleries.html", galleries)
 }
 
 func (h *AdminHandler) DeleteGallery(w http.ResponseWriter, r *http.Request) {
@@ -80,7 +86,7 @@ func (h *AdminHandler) Images(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 500)
 		return
 	}
-	h.tmpl.ExecuteTemplate(w, "images.html", images)
+	h.imagesTmpl.ExecuteTemplate(w, "images.html", images)
 }
 
 func (h *AdminHandler) DeleteImage(w http.ResponseWriter, r *http.Request) {

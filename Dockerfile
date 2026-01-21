@@ -16,9 +16,6 @@ FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y libvips42 ca-certificates && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /dajtu /usr/local/bin/dajtu
-COPY --from=builder /app/templates /templates
-
-WORKDIR /
 
 RUN useradd -r -s /bin/false dajtu
 USER dajtu

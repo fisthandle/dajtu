@@ -21,6 +21,8 @@
 
 ## Environment Variables
 
+### Core Settings
+
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PORT` | 8080 | HTTP server port |
@@ -30,6 +32,26 @@
 | `CLEANUP_TARGET_GB` | 45 | Target size after cleanup |
 | `BASE_URL` | (empty) | Public URL for generated links |
 | `KEEP_ORIGINAL_FORMAT` | true | Keep original image format |
+
+### Access Control
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ALLOWED_ORIGINS` | (empty) | CORS allowed origins (comma-separated). **Empty = allow all** |
+| `PUBLIC_UPLOAD` | true | Allow upload without authentication |
+
+### Braterstwo SSO (BRAT_*)
+
+| Variable | Description |
+|----------|-------------|
+| `BRAT_HASH_SECRET` | HMAC key for token verification |
+| `BRAT_ENCRYPTION_KEY` | AES key for token decryption |
+| `BRAT_ENCRYPTION_IV` | AES initialization vector |
+| `BRAT_CIPHER` | Cipher algorithm (default: AES-256-CBC) |
+| `BRAT_MAX_SKEW_SECONDS` | Max token time skew (default: 600) |
+| `BRAT_HASH_LENGTH` | Hash length (default: 10) |
+| `BRAT_HASH_BYTES` | Hash bytes (default: 5) |
+| `BRAT_MAX_PSEUDONIM_BYTES` | Max pseudonym length (default: 255) |
 
 ## Configuration Files
 

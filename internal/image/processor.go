@@ -18,7 +18,7 @@ var Sizes = []Size{
 	{Name: "1920", Width: 1920, Height: 0, Quality: 90},
 	{Name: "800", Width: 800, Height: 0, Quality: 90},
 	{Name: "200", Width: 200, Height: 0, Quality: 90},
-	{Name: "thumb", Width: 100, Height: 100, Quality: 85},
+	{Name: "thumb", Width: 150, Height: 150, Quality: 85},
 }
 
 type ProcessResult struct {

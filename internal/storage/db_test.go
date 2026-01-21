@@ -403,14 +403,14 @@ func TestDB_GetOldestImages(t *testing.T) {
 
 	now := time.Now().Unix()
 
-	// Insert images with different creation times
+	// Insert images with different access times (cleanup now sorts by accessed_at)
 	for i := 0; i < 10; i++ {
 		img := &Image{
 			Slug:       GenerateSlug(5),
 			MimeType:   "image/jpeg",
 			FileSize:   1000,
-			CreatedAt:  now - int64(i*100), // Older images have lower timestamps
-			AccessedAt: now,
+			CreatedAt:  now,
+			AccessedAt: now - int64(i*100), // Older accessed images have lower timestamps
 		}
 		db.InsertImage(img)
 	}
@@ -423,10 +423,10 @@ func TestDB_GetOldestImages(t *testing.T) {
 		t.Errorf("GetOldestImages(5) count = %d, want 5", len(oldest))
 	}
 
-	// Verify sorted by created_at ASC
+	// Verify sorted by accessed_at ASC (least recently accessed first)
 	for i := 1; i < len(oldest); i++ {
-		if oldest[i].CreatedAt < oldest[i-1].CreatedAt {
-			t.Error("images not sorted by created_at ASC")
+		if oldest[i].AccessedAt < oldest[i-1].AccessedAt {
+			t.Error("images not sorted by accessed_at ASC")
 		}
 	}
 }
