@@ -1,0 +1,17 @@
+{{template "layout" .}}
+{{define "content"}}
+<h1>Użytkownicy ({{len .}})</h1>
+<table>
+    <tr><th>ID</th><th>Nick</th><th>Slug</th><th>Utworzony</th></tr>
+    {{range .}}
+    <tr>
+        <td>{{.ID}}</td>
+        <td>{{.DisplayName}}</td>
+        <td>{{.Slug}}</td>
+        <td>{{.CreatedAt}}</td>
+    </tr>
+    {{else}}
+    <tr><td colspan="4">Brak użytkowników</td></tr>
+    {{end}}
+</table>
+{{end}}
