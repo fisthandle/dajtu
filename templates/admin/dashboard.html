@@ -1,0 +1,22 @@
+{{template "layout" .}}
+{{define "content"}}
+<h1>Dashboard</h1>
+<div>
+    <div class="stat">
+        <div class="stat-value">{{.TotalImages}}</div>
+        <div class="stat-label">Zdjęć</div>
+    </div>
+    <div class="stat">
+        <div class="stat-value">{{.TotalGalleries}}</div>
+        <div class="stat-label">Galerii</div>
+    </div>
+    <div class="stat">
+        <div class="stat-value">{{.TotalUsers}}</div>
+        <div class="stat-label">Użytkowników</div>
+    </div>
+    <div class="stat">
+        <div class="stat-value">{{printf "%.2f" (divf .DiskUsageBytes 1073741824)}} GB</div>
+        <div class="stat-label">Zajęte miejsce</div>
+    </div>
+</div>
+{{end}}
