@@ -52,6 +52,8 @@ func main() {
 	userHandler := handler.NewUserHandler(cfg, db)
 	uploadLimiter := middleware.NewRateLimiter(30, time.Minute)
 	sessionMiddleware := middleware.NewSessionMiddleware(db)
+	adminHandler := handler.NewAdminHandler(db, fs)
+	adminMiddleware := middleware.NewAdminMiddleware(cfg.AdminNicks)
 
 	bratUploadHandler := handler.NewBratUploadHandler(cfg, db, fs, authHandler.GetDecoder())
 
@@ -94,6 +96,17 @@ func main() {
 	mux.HandleFunc("/brrrt/", authHandler.HandleBratSSO)
 	mux.HandleFunc("/logout", authHandler.Logout)
 	mux.Handle("/brtup/", bratUploadHandler)
+
+	adminMux := http.NewServeMux()
+	adminMux.HandleFunc("GET /admin", adminHandler.Dashboard)
+	adminMux.HandleFunc("GET /admin/users", adminHandler.Users)
+	adminMux.HandleFunc("GET /admin/galleries", adminHandler.Galleries)
+	adminMux.HandleFunc("POST /admin/galleries/{id}/delete", adminHandler.DeleteGallery)
+	adminMux.HandleFunc("GET /admin/images", adminHandler.Images)
+	adminMux.HandleFunc("POST /admin/images/{id}/delete", adminHandler.DeleteImage)
+
+	mux.Handle("/admin", adminMiddleware.Middleware(adminMux))
+	mux.Handle("/admin/", adminMiddleware.Middleware(adminMux))
 
 	mux.HandleFunc("/i/", func(w http.ResponseWriter, r *http.Request) {
 		path := strings.TrimPrefix(r.URL.Path, "/i/")

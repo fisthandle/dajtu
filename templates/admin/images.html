@@ -1,0 +1,23 @@
+{{template "layout" .}}
+{{define "content"}}
+<h1>Zdjęcia ({{len .}})</h1>
+<table>
+    <tr><th>Podgląd</th><th>Nazwa</th><th>Właściciel</th><th>Rozmiar</th><th>Pobrań</th><th>Akcje</th></tr>
+    {{range .}}
+    <tr>
+        <td><a href="/i/{{.Slug}}" target="_blank"><img src="/i/{{.Slug}}/thumb" width="50" height="50" style="object-fit:cover;border-radius:4px;"></a></td>
+        <td>{{.OriginalName}}</td>
+        <td>{{if .OwnerName}}{{.OwnerName}}{{else}}-{{end}}</td>
+        <td>{{printf "%.1f" (divf .FileSize 1024)}} KB</td>
+        <td>{{.Downloads}}</td>
+        <td>
+            <form method="POST" action="/admin/images/{{.ID}}/delete" style="display:inline" onsubmit="return confirm('Usunąć zdjęcie?')">
+                <button class="btn-delete">Usuń</button>
+            </form>
+        </td>
+    </tr>
+    {{else}}
+    <tr><td colspan="6">Brak zdjęć</td></tr>
+    {{end}}
+</table>
+{{end}}
