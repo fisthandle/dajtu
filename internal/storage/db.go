@@ -482,7 +482,7 @@ func (db *DB) DeleteImageBySlug(slug string) error {
 func (db *DB) GetOldestImages(limit int) ([]*Image, error) {
 	rows, err := db.conn.Query(`
 		SELECT id, slug, original_name, mime_type, file_size, width, height, user_id, created_at, accessed_at, downloads, gallery_id
-		FROM images ORDER BY created_at ASC LIMIT ?`, limit)
+		FROM images ORDER BY accessed_at ASC LIMIT ?`, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -514,6 +514,31 @@ func (db *DB) SlugExists(table, slug string) (bool, error) {
 
 func (db *DB) Close() error {
 	return db.conn.Close()
+}
+
+type Stats struct {
+	TotalImages    int64
+	TotalGalleries int64
+	TotalUsers     int64
+	DiskUsageBytes int64
+}
+
+func (db *DB) GetStats() (*Stats, error) {
+	var stats Stats
+
+	row := db.conn.QueryRow(`SELECT COUNT(*) FROM images`)
+	row.Scan(&stats.TotalImages)
+
+	row = db.conn.QueryRow(`SELECT COUNT(*) FROM galleries`)
+	row.Scan(&stats.TotalGalleries)
+
+	row = db.conn.QueryRow(`SELECT COUNT(*) FROM users`)
+	row.Scan(&stats.TotalUsers)
+
+	row = db.conn.QueryRow(`SELECT COALESCE(SUM(file_size), 0) FROM images`)
+	row.Scan(&stats.DiskUsageBytes)
+
+	return &stats, nil
 }
 
 // GenerateUniqueSlug generuje unikalny slug dla tabeli
