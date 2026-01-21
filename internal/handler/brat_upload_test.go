@@ -151,8 +151,8 @@ func TestBratUpload_CORSHeaders(t *testing.T) {
 	h := NewBratUploadHandler(cfg, db, fs, decoder)
 
 	origins := []string{
-		"https://braterstwo.pl",
-		"https://forum.braterstwo.com",
+		"https://braterstwo.eu",
+		"https://forum.braterstwo.eu",
 		"http://localhost:3000",
 	}
 
@@ -233,7 +233,7 @@ func TestBratUpload_OptionsRequest(t *testing.T) {
 	h := NewBratUploadHandler(cfg, db, fs, decoder)
 
 	req := httptest.NewRequest("OPTIONS", "/brtup/token/123/nope", nil)
-	req.Header.Set("Origin", "https://braterstwo.pl")
+	req.Header.Set("Origin", "https://braterstwo.eu")
 	rec := httptest.NewRecorder()
 
 	h.ServeHTTP(rec, req)
@@ -242,8 +242,8 @@ func TestBratUpload_OptionsRequest(t *testing.T) {
 		t.Errorf("status = %d, want %d", rec.Code, http.StatusOK)
 	}
 
-	if rec.Header().Get("Access-Control-Allow-Origin") != "https://braterstwo.pl" {
-		t.Errorf("CORS header = %q, want 'https://braterstwo.pl'",
+	if rec.Header().Get("Access-Control-Allow-Origin") != "https://braterstwo.eu" {
+		t.Errorf("CORS header = %q, want 'https://braterstwo.eu'",
 			rec.Header().Get("Access-Control-Allow-Origin"))
 	}
 }
