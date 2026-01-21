@@ -2,15 +2,33 @@ services:
   app:
     build: .
     container_name: dajtu_app
-    ports:
-      - "8080:8080"
     environment:
       - PORT=8080
       - DATA_DIR=/data
-      - BASE_URL=http://localhost:8080
+      - BASE_URL=https://dajtu.com
       - MAX_FILE_SIZE_MB=20
-      - MAX_DISK_GB=10
-      - CLEANUP_TARGET_GB=8
+      - MAX_DISK_GB=50
+      - CLEANUP_TARGET_GB=45
+      # Brat SSO
+      - BRAT_HASH_SECRET=70bea0d8db1666ebb2c0aef1a820be13d8274dca73843935336f2dbb0e2f4f7e
+      - BRAT_ENCRYPTION_KEY=8d29fa415eda466a6e54d2843b5d219295de5fe9c5a52330c88a9f9b7107b0e4
+      - BRAT_ENCRYPTION_IV=eOnipVEZxUk52ezJ
+      - BRAT_CIPHER=AES-256-CBC
+      - BRAT_HASH_LENGTH=10
+      - BRAT_HASH_BYTES=5
+      - BRAT_MAX_SKEW_SECONDS=600
+      - BRAT_MAX_PSEUDONIM_BYTES=255
     volumes:
       - ./data:/data
+    networks:
+      - web
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+networks:
+  web:
+    external: true
