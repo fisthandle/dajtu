@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"database/sql"
+	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -245,6 +246,53 @@ func (db *DB) GetGalleryByExternalID(externalID string) (*Gallery, error) {
 		return nil, nil
 	}
 	return g, err
+}
+
+func (db *DB) GetOrCreateBratGallery(userID int64, userSlug, entryID, title string) (*Gallery, error) {
+	externalID := fmt.Sprintf("brat-%s-%s", entryID, userSlug)
+
+	g := &Gallery{}
+	err := db.conn.QueryRow(`
+		SELECT id, slug, edit_token, title, description, user_id, external_id, created_at, updated_at
+		FROM galleries WHERE external_id = ? AND user_id = ?`, externalID, userID).Scan(
+		&g.ID, &g.Slug, &g.EditToken, &g.Title, &g.Description, &g.UserID, &g.ExternalID, &g.CreatedAt, &g.UpdatedAt)
+
+	if err == nil {
+		return g, nil
+	}
+	if err != sql.ErrNoRows {
+		return nil, err
+	}
+
+	slug := db.GenerateUniqueSlug("galleries", 4)
+	editToken := generateSecureToken()
+	now := time.Now().Unix()
+
+	res, err := db.conn.Exec(`
+		INSERT INTO galleries (slug, edit_token, title, description, user_id, external_id, created_at, updated_at)
+		VALUES (?, ?, ?, '', ?, ?, ?, ?)`,
+		slug, editToken, title, userID, externalID, now, now)
+	if err != nil {
+		return nil, err
+	}
+
+	id, _ := res.LastInsertId()
+	return &Gallery{
+		ID:         id,
+		Slug:       slug,
+		EditToken:  editToken,
+		Title:      title,
+		UserID:     &userID,
+		ExternalID: &externalID,
+		CreatedAt:  now,
+		UpdatedAt:  now,
+	}, nil
+}
+
+func generateSecureToken() string {
+	b := make([]byte, 16)
+	rand.Read(b)
+	return base64.URLEncoding.EncodeToString(b)
 }
 
 func (db *DB) GetUserGalleries(userID int64) ([]*Gallery, error) {
