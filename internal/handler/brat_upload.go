@@ -76,10 +76,16 @@ func (h *BratUploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	title, err := base64.URLEncoding.DecodeString(titleBase64)
-	if err != nil {
-		jsonError(w, "invalid title encoding", http.StatusBadRequest)
-		return
+	var title string
+	if titleBase64 == "nope" {
+		title = "Nowe wątki"
+	} else {
+		titleBytes, err := base64.URLEncoding.DecodeString(titleBase64)
+		if err != nil {
+			jsonError(w, "invalid title encoding", http.StatusBadRequest)
+			return
+		}
+		title = string(titleBytes)
 	}
 
 	r.Body = http.MaxBytesReader(w, r.Body, int64(h.cfg.MaxFileSizeMB)*1024*1024)
@@ -89,7 +95,7 @@ func (h *BratUploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	file, header, err := r.FormFile("file")
+	file, header, err := r.FormFile("image")
 	if err != nil {
 		jsonError(w, "no file provided", http.StatusBadRequest)
 		return
@@ -134,7 +140,7 @@ func (h *BratUploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		gallery = &storage.Gallery{
 			Slug:       gallerySlug,
 			EditToken:  editToken,
-			Title:      string(title),
+			Title:      title,
 			UserID:     &dbUser.ID,
 			ExternalID: &externalID,
 			CreatedAt:  now,
