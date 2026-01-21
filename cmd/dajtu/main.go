@@ -137,11 +137,23 @@ func main() {
 			return
 		}
 
+		validSizes := map[string]bool{
+			"original.webp": true, "1920.webp": true, "800.webp": true,
+			"200.webp": true, "thumb.webp": true,
+		}
+
 		prefix := slug[:2]
 		size := "original.webp"
 
 		if len(parts) == 2 {
 			size = parts[1]
+			if !strings.HasSuffix(size, ".webp") {
+				size = size + ".webp"
+			}
+			if !validSizes[size] {
+				http.NotFound(w, r)
+				return
+			}
 		}
 
 		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")

@@ -1,7 +1,9 @@
 package middleware
 
 import (
+	"net"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 )
@@ -70,10 +72,7 @@ func (rl *RateLimiter) Allow(ip string) bool {
 
 func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ip := r.Header.Get("X-Forwarded-For")
-		if ip == "" {
-			ip = r.RemoteAddr
-		}
+		ip := extractClientIP(r)
 
 		if !rl.Allow(ip) {
 			http.Error(w, "rate limit exceeded", http.StatusTooManyRequests)
@@ -82,4 +81,24 @@ func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 
 		next.ServeHTTP(w, r)
 	})
+}
+
+func extractClientIP(r *http.Request) string {
+	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+		parts := strings.Split(xff, ",")
+		if len(parts) > 0 {
+			ip := strings.TrimSpace(parts[0])
+			if parsed := net.ParseIP(ip); parsed != nil {
+				return parsed.String()
+			}
+		}
+	}
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
+	}
+	if parsed := net.ParseIP(host); parsed != nil {
+		return parsed.String()
+	}
+	return host
 }

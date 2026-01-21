@@ -181,6 +181,7 @@ func (h *GalleryHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(uploadedImages) == 0 {
+		_ = h.db.DeleteGalleryByID(galleryID)
 		jsonError(w, "no valid images uploaded", http.StatusBadRequest)
 		return
 	}

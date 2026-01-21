@@ -1,6 +1,7 @@
 package config
 
 import (
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -118,8 +119,20 @@ func (c *Config) IsOriginAllowed(origin string) bool {
 	if len(c.AllowedOrigins) == 0 {
 		return true // no restrictions if not configured
 	}
+	parsed, err := url.Parse(origin)
+	if err != nil || parsed.Host == "" {
+		return false
+	}
+	originHost := parsed.Hostname() // strips port
 	for _, allowed := range c.AllowedOrigins {
-		if strings.Contains(origin, allowed) {
+		allowedHost := allowed
+		if allowedParsed, err := url.Parse(allowed); err == nil && allowedParsed.Host != "" {
+			allowedHost = allowedParsed.Hostname()
+		}
+		if originHost == allowedHost {
+			return true
+		}
+		if strings.HasSuffix(originHost, "."+allowedHost) {
 			return true
 		}
 	}

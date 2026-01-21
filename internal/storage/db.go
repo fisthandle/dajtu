@@ -550,17 +550,18 @@ type ImageAdmin struct {
 func (db *DB) GetStats() (*Stats, error) {
 	var stats Stats
 
-	row := db.conn.QueryRow(`SELECT COUNT(*) FROM images`)
-	row.Scan(&stats.TotalImages)
-
-	row = db.conn.QueryRow(`SELECT COUNT(*) FROM galleries`)
-	row.Scan(&stats.TotalGalleries)
-
-	row = db.conn.QueryRow(`SELECT COUNT(*) FROM users`)
-	row.Scan(&stats.TotalUsers)
-
-	row = db.conn.QueryRow(`SELECT COALESCE(SUM(file_size), 0) FROM images`)
-	row.Scan(&stats.DiskUsageBytes)
+	if err := db.conn.QueryRow(`SELECT COUNT(*) FROM images`).Scan(&stats.TotalImages); err != nil {
+		return nil, err
+	}
+	if err := db.conn.QueryRow(`SELECT COUNT(*) FROM galleries`).Scan(&stats.TotalGalleries); err != nil {
+		return nil, err
+	}
+	if err := db.conn.QueryRow(`SELECT COUNT(*) FROM users`).Scan(&stats.TotalUsers); err != nil {
+		return nil, err
+	}
+	if err := db.conn.QueryRow(`SELECT COALESCE(SUM(file_size), 0) FROM images`).Scan(&stats.DiskUsageBytes); err != nil {
+		return nil, err
+	}
 
 	return &stats, nil
 }
@@ -590,24 +591,25 @@ func (db *DB) ListUsers(limit, offset int) ([]*User, error) {
 
 // GenerateUniqueSlug generuje unikalny slug dla tabeli
 func (db *DB) GenerateUniqueSlug(table string, length int) string {
-	// Whitelist tabel dla bezpieczeństwa
 	validTables := map[string]bool{"images": true, "galleries": true, "users": true}
 	if !validTables[table] {
 		return GenerateSlug(length)
 	}
 
-	candidates := make([]string, 20)
-	for i := range candidates {
-		candidates[i] = GenerateSlug(length)
-	}
-
-	for _, slug := range candidates {
-		exists, err := db.SlugExists(table, slug)
-		if err == nil && !exists {
-			return slug
+	const maxRetries = 100
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		candidates := make([]string, 20)
+		for i := range candidates {
+			candidates[i] = GenerateSlug(length)
+		}
+		for _, slug := range candidates {
+			exists, err := db.SlugExists(table, slug)
+			if err == nil && !exists {
+				return slug
+			}
 		}
 	}
-	return db.GenerateUniqueSlug(table, length)
+	panic("GenerateUniqueSlug: exceeded max retries, possible DB issue")
 }
 
 func (db *DB) ListGalleriesAdmin(limit, offset int) ([]*GalleryAdmin, error) {
