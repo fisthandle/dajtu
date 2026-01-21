@@ -173,6 +173,19 @@
             margin-top: 10px;
         }
         .edit-mode .edit-status { display: block; }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+        .pagination a {
+            color: #4a9eff;
+            text-decoration: none;
+        }
+        .pagination a:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -204,6 +217,18 @@
             </div>
             {{end}}
         </div>
+
+        {{if gt .TotalPages 1}}
+        <div class="pagination">
+            {{if .HasPrev}}
+            <a href="?page={{.PrevPage}}{{if .EditToken}}&edit={{.EditToken}}{{end}}">&laquo; Poprzednia</a>
+            {{end}}
+            <span>Strona {{.CurrentPage}} z {{.TotalPages}} ({{.TotalImages}} zdjęć)</span>
+            {{if .HasNext}}
+            <a href="?page={{.NextPage}}{{if .EditToken}}&edit={{.EditToken}}{{end}}">Następna &raquo;</a>
+            {{end}}
+        </div>
+        {{end}}
     </div>
 
     <div class="lightbox" id="lightbox">

@@ -399,6 +399,37 @@ func (db *DB) GetGalleryImages(galleryID int64) ([]*Image, error) {
 	return images, rows.Err()
 }
 
+func (db *DB) GetGalleryImagesPaginated(galleryID int64, limit, offset int) ([]*Image, int, error) {
+	var total int
+	err := db.conn.QueryRow(`SELECT COUNT(*) FROM images WHERE gallery_id = ?`, galleryID).Scan(&total)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	rows, err := db.conn.Query(`
+		SELECT id, slug, original_name, mime_type, file_size, width, height, user_id, created_at, accessed_at, gallery_id
+		FROM images WHERE gallery_id = ?
+		ORDER BY created_at DESC
+		LIMIT ? OFFSET ?
+	`, galleryID, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var images []*Image
+	for rows.Next() {
+		img := &Image{}
+		if err := rows.Scan(&img.ID, &img.Slug, &img.OriginalName, &img.MimeType, &img.FileSize, &img.Width, &img.Height,
+			&img.UserID, &img.CreatedAt, &img.AccessedAt, &img.GalleryID); err != nil {
+			return nil, 0, err
+		}
+		images = append(images, img)
+	}
+
+	return images, total, rows.Err()
+}
+
 func (db *DB) DeleteImageBySlug(slug string) error {
 	_, err := db.conn.Exec("DELETE FROM images WHERE slug = ?", slug)
 	return err

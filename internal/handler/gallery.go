@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -386,11 +387,21 @@ func (h *GalleryHandler) View(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	images, err := h.db.GetGalleryImages(gallery.ID)
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	if page < 1 {
+		page = 1
+	}
+
+	const perPage = 100
+	offset := (page - 1) * perPage
+
+	images, total, err := h.db.GetGalleryImagesPaginated(gallery.ID, perPage, offset)
 	if err != nil {
 		http.Error(w, "error loading images", http.StatusInternalServerError)
 		return
 	}
+
+	totalPages := (total + perPage - 1) / perPage
 
 	baseURL := getBaseURL(h.cfg, r)
 
@@ -413,7 +424,6 @@ func (h *GalleryHandler) View(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	// Check for edit token in URL
 	editToken := r.URL.Query().Get("edit")
 	editMode := editToken != "" && editToken == gallery.EditToken
 
@@ -425,6 +435,13 @@ func (h *GalleryHandler) View(w http.ResponseWriter, r *http.Request) {
 		"Slug":        gallery.Slug,
 		"EditToken":   editToken,
 		"EditMode":    editMode,
+		"CurrentPage": page,
+		"TotalPages":  totalPages,
+		"TotalImages": total,
+		"HasPrev":     page > 1,
+		"HasNext":     page < totalPages,
+		"PrevPage":    page - 1,
+		"NextPage":    page + 1,
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
