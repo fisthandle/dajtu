@@ -101,8 +101,6 @@ func (db *DB) migrate() error {
 		FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 	);
 
-	ALTER TABLE galleries ADD COLUMN external_id TEXT;
-
 	CREATE TABLE IF NOT EXISTS images (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		slug CHAR(5) NOT NULL UNIQUE,
