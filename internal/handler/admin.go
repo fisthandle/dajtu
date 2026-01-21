@@ -4,6 +4,7 @@ import (
 	"html/template"
 	"net/http"
 	"strconv"
+	"time"
 
 	"dajtu/internal/storage"
 )
@@ -25,13 +26,19 @@ func NewAdminHandler(db *storage.DB, fs *storage.Filesystem) *AdminHandler {
 			}
 			return float64(a) / float64(b)
 		},
+		"formatDate": func(ts int64) string {
+			if ts == 0 {
+				return "-"
+			}
+			return time.Unix(ts, 0).Format("2006-01-02 15:04:05")
+		},
 	}
 	return &AdminHandler{
 		db:            db,
 		fs:            fs,
 		dashboardTmpl: template.Must(template.New("dashboard").Funcs(funcMap).ParseFS(templates, "templates/admin/dashboard.html")),
-		usersTmpl:     template.Must(template.New("users").ParseFS(templates, "templates/admin/users.html")),
-		galleriesTmpl: template.Must(template.New("galleries").ParseFS(templates, "templates/admin/galleries.html")),
+		usersTmpl:     template.Must(template.New("users").Funcs(funcMap).ParseFS(templates, "templates/admin/users.html")),
+		galleriesTmpl: template.Must(template.New("galleries").Funcs(funcMap).ParseFS(templates, "templates/admin/galleries.html")),
 		imagesTmpl:    template.Must(template.New("images").Funcs(funcMap).ParseFS(templates, "templates/admin/images.html")),
 	}
 }

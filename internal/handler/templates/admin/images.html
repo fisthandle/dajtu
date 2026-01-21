@@ -28,14 +28,15 @@
     </nav>
     <h1>Zdjęcia ({{len .}})</h1>
     <table>
-        <tr><th>Podgląd</th><th>Nazwa</th><th>Właściciel</th><th>Rozmiar</th><th>Pobrań</th><th>Akcje</th></tr>
+        <tr><th>Podgląd</th><th>Nazwa</th><th>Właściciel</th><th>Rozmiar</th><th>Pobrań</th><th>Ostatni podgląd</th><th>Akcje</th></tr>
         {{range .}}
         <tr>
-            <td><a href="/i/{{.Slug}}" target="_blank"><img src="/i/{{.Slug}}/thumb" class="thumb"></a></td>
+            <td><a href="/i/{{.Slug}}" target="_blank"><img src="/i/{{.Slug}}/thumb.webp" class="thumb"></a></td>
             <td>{{.OriginalName}}</td>
-            <td>{{if .OwnerName}}{{.OwnerName}}{{else}}-{{end}}</td>
+            <td>{{if .OwnerSlug}}<a href="/u/{{.OwnerSlug}}">{{.OwnerName}}</a>{{else}}-{{end}}</td>
             <td>{{printf "%.1f" (divf .FileSize 1024)}} KB</td>
             <td>{{.Downloads}}</td>
+            <td>{{formatDate .AccessedAt}}</td>
             <td>
                 <form method="POST" action="/admin/images/{{.ID}}/delete" style="display:inline" onsubmit="return confirm('Usunąć zdjęcie?')">
                     <button class="btn-delete">Usuń</button>
@@ -43,7 +44,7 @@
             </td>
         </tr>
         {{else}}
-        <tr><td colspan="6">Brak zdjęć</td></tr>
+        <tr><td colspan="7">Brak zdjęć</td></tr>
         {{end}}
     </table>
 </body>

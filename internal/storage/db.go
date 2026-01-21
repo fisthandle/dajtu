@@ -531,6 +531,7 @@ type GalleryAdmin struct {
 	CreatedAt  int64
 	ImageCount int
 	OwnerName  string
+	OwnerSlug  string
 }
 
 type ImageAdmin struct {
@@ -542,6 +543,7 @@ type ImageAdmin struct {
 	CreatedAt    int64
 	AccessedAt   int64
 	OwnerName    string
+	OwnerSlug    string
 	GallerySlug  string
 }
 
@@ -612,7 +614,8 @@ func (db *DB) ListGalleriesAdmin(limit, offset int) ([]*GalleryAdmin, error) {
 	rows, err := db.conn.Query(`
 		SELECT g.id, g.slug, g.title, g.user_id, g.created_at,
 		       COUNT(i.id) as image_count,
-		       COALESCE(u.display_name, '') as owner_name
+		       COALESCE(u.display_name, '') as owner_name,
+		       COALESCE(u.slug, '') as owner_slug
 		FROM galleries g
 		LEFT JOIN images i ON i.gallery_id = g.id
 		LEFT JOIN users u ON u.id = g.user_id
@@ -628,7 +631,7 @@ func (db *DB) ListGalleriesAdmin(limit, offset int) ([]*GalleryAdmin, error) {
 	var galleries []*GalleryAdmin
 	for rows.Next() {
 		g := &GalleryAdmin{}
-		if err := rows.Scan(&g.ID, &g.Slug, &g.Title, &g.UserID, &g.CreatedAt, &g.ImageCount, &g.OwnerName); err != nil {
+		if err := rows.Scan(&g.ID, &g.Slug, &g.Title, &g.UserID, &g.CreatedAt, &g.ImageCount, &g.OwnerName, &g.OwnerSlug); err != nil {
 			return nil, err
 		}
 		galleries = append(galleries, g)
@@ -663,6 +666,7 @@ func (db *DB) ListImagesAdmin(limit, offset int) ([]*ImageAdmin, error) {
 	rows, err := db.conn.Query(`
 		SELECT i.id, i.slug, i.original_name, i.file_size, i.downloads, i.created_at, i.accessed_at,
 		       COALESCE(u.display_name, '') as owner_name,
+		       COALESCE(u.slug, '') as owner_slug,
 		       COALESCE(g.slug, '') as gallery_slug
 		FROM images i
 		LEFT JOIN users u ON u.id = i.user_id
@@ -678,7 +682,7 @@ func (db *DB) ListImagesAdmin(limit, offset int) ([]*ImageAdmin, error) {
 	var images []*ImageAdmin
 	for rows.Next() {
 		img := &ImageAdmin{}
-		if err := rows.Scan(&img.ID, &img.Slug, &img.OriginalName, &img.FileSize, &img.Downloads, &img.CreatedAt, &img.AccessedAt, &img.OwnerName, &img.GallerySlug); err != nil {
+		if err := rows.Scan(&img.ID, &img.Slug, &img.OriginalName, &img.FileSize, &img.Downloads, &img.CreatedAt, &img.AccessedAt, &img.OwnerName, &img.OwnerSlug, &img.GallerySlug); err != nil {
 			return nil, err
 		}
 		images = append(images, img)

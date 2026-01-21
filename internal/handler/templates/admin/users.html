@@ -29,9 +29,9 @@
         {{range .}}
         <tr>
             <td>{{.ID}}</td>
-            <td>{{.DisplayName}}</td>
+            <td><a href="/u/{{.Slug}}">{{.DisplayName}}</a></td>
             <td>{{.Slug}}</td>
-            <td>{{.CreatedAt}}</td>
+            <td>{{formatDate .CreatedAt}}</td>
         </tr>
         {{else}}
         <tr><td colspan="4">Brak użytkowników</td></tr>

@@ -27,13 +27,14 @@
     </nav>
     <h1>Galerie ({{len .}})</h1>
     <table>
-        <tr><th>ID</th><th>Tytuł</th><th>Właściciel</th><th>Zdjęć</th><th>Akcje</th></tr>
+        <tr><th>ID</th><th>Tytuł</th><th>Właściciel</th><th>Zdjęć</th><th>Utworzona</th><th>Akcje</th></tr>
         {{range .}}
         <tr>
             <td>{{.ID}}</td>
             <td><a href="/g/{{.Slug}}" target="_blank">{{if .Title}}{{.Title}}{{else}}(bez tytułu){{end}}</a></td>
-            <td>{{if .OwnerName}}{{.OwnerName}}{{else}}-{{end}}</td>
+            <td>{{if .OwnerSlug}}<a href="/u/{{.OwnerSlug}}">{{.OwnerName}}</a>{{else}}-{{end}}</td>
             <td>{{.ImageCount}}</td>
+            <td>{{formatDate .CreatedAt}}</td>
             <td>
                 <form method="POST" action="/admin/galleries/{{.ID}}/delete" style="display:inline" onsubmit="return confirm('Usunąć galerię ze wszystkimi zdjęciami?')">
                     <button class="btn-delete">Usuń</button>
@@ -41,7 +42,7 @@
             </td>
         </tr>
         {{else}}
-        <tr><td colspan="5">Brak galerii</td></tr>
+        <tr><td colspan="6">Brak galerii</td></tr>
         {{end}}
     </table>
 </body>
