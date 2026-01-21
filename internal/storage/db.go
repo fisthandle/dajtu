@@ -523,6 +523,28 @@ type Stats struct {
 	DiskUsageBytes int64
 }
 
+type GalleryAdmin struct {
+	ID         int64
+	Slug       string
+	Title      string
+	UserID     *int64
+	CreatedAt  int64
+	ImageCount int
+	OwnerName  string
+}
+
+type ImageAdmin struct {
+	ID           int64
+	Slug         string
+	OriginalName string
+	FileSize     int64
+	Downloads    int64
+	CreatedAt    int64
+	AccessedAt   int64
+	OwnerName    string
+	GallerySlug  string
+}
+
 func (db *DB) GetStats() (*Stats, error) {
 	var stats Stats
 
@@ -539,6 +561,29 @@ func (db *DB) GetStats() (*Stats, error) {
 	row.Scan(&stats.DiskUsageBytes)
 
 	return &stats, nil
+}
+
+func (db *DB) ListUsers(limit, offset int) ([]*User, error) {
+	rows, err := db.conn.Query(`
+		SELECT id, slug, display_name, created_at, COALESCE(updated_at, created_at)
+		FROM users
+		ORDER BY created_at DESC
+		LIMIT ? OFFSET ?
+	`, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []*User
+	for rows.Next() {
+		u := &User{}
+		if err := rows.Scan(&u.ID, &u.Slug, &u.DisplayName, &u.CreatedAt, &u.UpdatedAt); err != nil {
+			return nil, err
+		}
+		users = append(users, u)
+	}
+	return users, rows.Err()
 }
 
 // GenerateUniqueSlug generuje unikalny slug dla tabeli
@@ -561,4 +606,97 @@ func (db *DB) GenerateUniqueSlug(table string, length int) string {
 		}
 	}
 	return db.GenerateUniqueSlug(table, length)
+}
+
+func (db *DB) ListGalleriesAdmin(limit, offset int) ([]*GalleryAdmin, error) {
+	rows, err := db.conn.Query(`
+		SELECT g.id, g.slug, g.title, g.user_id, g.created_at,
+		       COUNT(i.id) as image_count,
+		       COALESCE(u.display_name, '') as owner_name
+		FROM galleries g
+		LEFT JOIN images i ON i.gallery_id = g.id
+		LEFT JOIN users u ON u.id = g.user_id
+		GROUP BY g.id
+		ORDER BY g.created_at DESC
+		LIMIT ? OFFSET ?
+	`, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var galleries []*GalleryAdmin
+	for rows.Next() {
+		g := &GalleryAdmin{}
+		if err := rows.Scan(&g.ID, &g.Slug, &g.Title, &g.UserID, &g.CreatedAt, &g.ImageCount, &g.OwnerName); err != nil {
+			return nil, err
+		}
+		galleries = append(galleries, g)
+	}
+	return galleries, rows.Err()
+}
+
+func (db *DB) GetImagesByGallery(galleryID int64) ([]*Image, error) {
+	rows, err := db.conn.Query(`SELECT id, slug FROM images WHERE gallery_id = ?`, galleryID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var images []*Image
+	for rows.Next() {
+		img := &Image{}
+		if err := rows.Scan(&img.ID, &img.Slug); err != nil {
+			return nil, err
+		}
+		images = append(images, img)
+	}
+	return images, rows.Err()
+}
+
+func (db *DB) DeleteGalleryByID(id int64) error {
+	_, err := db.conn.Exec(`DELETE FROM galleries WHERE id = ?`, id)
+	return err
+}
+
+func (db *DB) ListImagesAdmin(limit, offset int) ([]*ImageAdmin, error) {
+	rows, err := db.conn.Query(`
+		SELECT i.id, i.slug, i.original_name, i.file_size, i.downloads, i.created_at, i.accessed_at,
+		       COALESCE(u.display_name, '') as owner_name,
+		       COALESCE(g.slug, '') as gallery_slug
+		FROM images i
+		LEFT JOIN users u ON u.id = i.user_id
+		LEFT JOIN galleries g ON g.id = i.gallery_id
+		ORDER BY i.created_at DESC
+		LIMIT ? OFFSET ?
+	`, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var images []*ImageAdmin
+	for rows.Next() {
+		img := &ImageAdmin{}
+		if err := rows.Scan(&img.ID, &img.Slug, &img.OriginalName, &img.FileSize, &img.Downloads, &img.CreatedAt, &img.AccessedAt, &img.OwnerName, &img.GallerySlug); err != nil {
+			return nil, err
+		}
+		images = append(images, img)
+	}
+	return images, nil
+}
+
+func (db *DB) GetImageByID(id int64) (*Image, error) {
+	row := db.conn.QueryRow(`SELECT id, slug FROM images WHERE id = ?`, id)
+	img := &Image{}
+	err := row.Scan(&img.ID, &img.Slug)
+	if err != nil {
+		return nil, err
+	}
+	return img, nil
+}
+
+func (db *DB) DeleteImageByID(id int64) error {
+	_, err := db.conn.Exec(`DELETE FROM images WHERE id = ?`, id)
+	return err
 }
