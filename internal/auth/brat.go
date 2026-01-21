@@ -80,6 +80,10 @@ func NewBratDecoder(cfg BratConfig) (*BratDecoder, error) {
 }
 
 func (d *BratDecoder) Decode(data string) (*BratUser, error) {
+	return d.DecodeWithMaxAge(data, int64(d.cfg.MaxSkewSeconds))
+}
+
+func (d *BratDecoder) DecodeWithMaxAge(data string, maxAgeSeconds int64) (*BratUser, error) {
 	if d == nil {
 		return nil, ErrConfigMissing
 	}
@@ -103,7 +107,7 @@ func (d *BratDecoder) Decode(data string) (*BratUser, error) {
 		return nil, ErrInvalidHMAC
 	}
 
-	if !d.verifyTimestamp(parsed.Timestamp) {
+	if !d.verifyTimestampWithAge(parsed.Timestamp, maxAgeSeconds) {
 		return nil, ErrTimestampExpired
 	}
 
@@ -214,11 +218,10 @@ func (d *BratDecoder) verifyHMAC(p *parsedPayload) bool {
 	return subtle.ConstantTimeCompare([]byte(expected), []byte(p.Hash)) == 1
 }
 
-func (d *BratDecoder) verifyTimestamp(ts int64) bool {
-	if d.cfg.MaxSkewSeconds <= 0 {
+func (d *BratDecoder) verifyTimestampWithAge(ts, maxAgeSeconds int64) bool {
+	if maxAgeSeconds <= 0 {
 		return true
 	}
 	now := time.Now().Unix()
-	maxSkew := int64(d.cfg.MaxSkewSeconds)
-	return ts >= now-maxSkew && ts <= now+maxSkew
+	return ts >= now-maxAgeSeconds && ts <= now+60
 }

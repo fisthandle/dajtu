@@ -36,6 +36,10 @@ func NewAuthHandler(cfg *config.Config, db *storage.DB) (*AuthHandler, error) {
 	return &AuthHandler{cfg: cfg, db: db, decoder: decoder}, nil
 }
 
+func (h *AuthHandler) GetDecoder() *auth.BratDecoder {
+	return h.decoder
+}
+
 func (h *AuthHandler) HandleBratSSO(w http.ResponseWriter, r *http.Request) {
 	if h.decoder == nil {
 		http.Error(w, "SSO not configured", http.StatusServiceUnavailable)

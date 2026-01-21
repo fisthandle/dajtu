@@ -9,14 +9,16 @@ import (
 type Size struct {
 	Name    string
 	Width   int
+	Height  int
 	Quality int
 }
 
 var Sizes = []Size{
-	{Name: "original", Width: 4096, Quality: 90},
-	{Name: "1920", Width: 1920, Quality: 90},
-	{Name: "800", Width: 800, Quality: 90},
-	{Name: "200", Width: 200, Quality: 90},
+	{Name: "original", Width: 4096, Height: 0, Quality: 90},
+	{Name: "1920", Width: 1920, Height: 0, Quality: 90},
+	{Name: "800", Width: 800, Height: 0, Quality: 90},
+	{Name: "200", Width: 200, Height: 0, Quality: 90},
+	{Name: "thumb", Width: 100, Height: 100, Quality: 85},
 }
 
 type ProcessResult struct {
@@ -45,12 +47,21 @@ func Process(data []byte) ([]ProcessResult, error) {
 		}
 
 		// Re-encode to WebP (this strips all metadata and potential malicious content)
-		processed, err := bimg.NewImage(data).Process(bimg.Options{
+		opts := bimg.Options{
 			Width:         targetWidth,
 			Type:          bimg.WEBP,
 			Quality:       s.Quality,
 			StripMetadata: true,
-		})
+		}
+
+		if s.Height > 0 {
+			opts.Width = s.Width
+			opts.Height = s.Height
+			opts.Crop = true
+			opts.Gravity = bimg.GravityCentre
+		}
+
+		processed, err := bimg.NewImage(data).Process(opts)
 		if err != nil {
 			return nil, fmt.Errorf("process %s: %w", s.Name, err)
 		}

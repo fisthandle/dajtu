@@ -41,6 +41,8 @@ func main() {
 	uploadLimiter := middleware.NewRateLimiter(30, time.Minute)
 	sessionMiddleware := middleware.NewSessionMiddleware(db)
 
+	bratUploadHandler := handler.NewBratUploadHandler(cfg, db, fs, authHandler.GetDecoder())
+
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/", galleryHandler.Index)
@@ -79,6 +81,7 @@ func main() {
 	mux.HandleFunc("/u/", userHandler.View)
 	mux.HandleFunc("/brrrt/", authHandler.HandleBratSSO)
 	mux.HandleFunc("/logout", authHandler.Logout)
+	mux.Handle("/brtup/", bratUploadHandler)
 
 	mux.HandleFunc("/i/", func(w http.ResponseWriter, r *http.Request) {
 		path := strings.TrimPrefix(r.URL.Path, "/i/")

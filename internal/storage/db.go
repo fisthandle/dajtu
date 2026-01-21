@@ -47,6 +47,7 @@ type Gallery struct {
 	Title       string
 	Description string
 	UserID      *int64
+	ExternalID  *string
 	CreatedAt   int64
 	UpdatedAt   int64
 }
@@ -94,10 +95,13 @@ func (db *DB) migrate() error {
 		title TEXT,
 		description TEXT,
 		user_id INTEGER,
+		external_id TEXT,
 		created_at INTEGER NOT NULL,
 		updated_at INTEGER NOT NULL,
 		FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 	);
+
+	ALTER TABLE galleries ADD COLUMN external_id TEXT;
 
 	CREATE TABLE IF NOT EXISTS images (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -131,6 +135,7 @@ func (db *DB) migrate() error {
 	CREATE INDEX IF NOT EXISTS idx_galleries_slug ON galleries(slug);
 	CREATE INDEX IF NOT EXISTS idx_galleries_user ON galleries(user_id);
 	CREATE INDEX IF NOT EXISTS idx_galleries_edit ON galleries(edit_token);
+	CREATE INDEX IF NOT EXISTS idx_galleries_external ON galleries(external_id);
 	CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
 	CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
 	`
@@ -169,9 +174,9 @@ func (db *DB) TouchImageBySlug(slug string) error {
 
 func (db *DB) InsertGallery(g *Gallery) (int64, error) {
 	res, err := db.conn.Exec(`
-		INSERT INTO galleries (slug, edit_token, title, description, user_id, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		g.Slug, g.EditToken, g.Title, g.Description, g.UserID, g.CreatedAt, g.UpdatedAt)
+		INSERT INTO galleries (slug, edit_token, title, description, user_id, external_id, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		g.Slug, g.EditToken, g.Title, g.Description, g.UserID, g.ExternalID, g.CreatedAt, g.UpdatedAt)
 	if err != nil {
 		return 0, err
 	}
@@ -181,8 +186,19 @@ func (db *DB) InsertGallery(g *Gallery) (int64, error) {
 func (db *DB) GetGalleryBySlug(slug string) (*Gallery, error) {
 	g := &Gallery{}
 	err := db.conn.QueryRow(`
-		SELECT id, slug, edit_token, title, description, user_id, created_at, updated_at
-		FROM galleries WHERE slug = ?`, slug).Scan(&g.ID, &g.Slug, &g.EditToken, &g.Title, &g.Description, &g.UserID, &g.CreatedAt, &g.UpdatedAt)
+		SELECT id, slug, edit_token, title, description, user_id, external_id, created_at, updated_at
+		FROM galleries WHERE slug = ?`, slug).Scan(&g.ID, &g.Slug, &g.EditToken, &g.Title, &g.Description, &g.UserID, &g.ExternalID, &g.CreatedAt, &g.UpdatedAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return g, err
+}
+
+func (db *DB) GetGalleryByExternalID(externalID string) (*Gallery, error) {
+	g := &Gallery{}
+	err := db.conn.QueryRow(`
+		SELECT id, slug, edit_token, title, description, user_id, external_id, created_at, updated_at
+		FROM galleries WHERE external_id = ?`, externalID).Scan(&g.ID, &g.Slug, &g.EditToken, &g.Title, &g.Description, &g.UserID, &g.ExternalID, &g.CreatedAt, &g.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -191,7 +207,7 @@ func (db *DB) GetGalleryBySlug(slug string) (*Gallery, error) {
 
 func (db *DB) GetUserGalleries(userID int64) ([]*Gallery, error) {
 	rows, err := db.conn.Query(`
-		SELECT id, slug, edit_token, title, description, user_id, created_at, updated_at
+		SELECT id, slug, edit_token, title, description, user_id, external_id, created_at, updated_at
 		FROM galleries WHERE user_id = ? ORDER BY created_at DESC`, userID)
 	if err != nil {
 		return nil, err
@@ -201,7 +217,7 @@ func (db *DB) GetUserGalleries(userID int64) ([]*Gallery, error) {
 	var galleries []*Gallery
 	for rows.Next() {
 		g := &Gallery{}
-		if err := rows.Scan(&g.ID, &g.Slug, &g.EditToken, &g.Title, &g.Description, &g.UserID, &g.CreatedAt, &g.UpdatedAt); err != nil {
+		if err := rows.Scan(&g.ID, &g.Slug, &g.EditToken, &g.Title, &g.Description, &g.UserID, &g.ExternalID, &g.CreatedAt, &g.UpdatedAt); err != nil {
 			return nil, err
 		}
 		galleries = append(galleries, g)
