@@ -16,6 +16,7 @@ type Config struct {
 	KeepOriginalFormat bool
 	AllowedOrigins     []string // CORS allowed origins
 	PublicUpload       bool     // allow upload without login
+	AdminNicks         []string // nicks with admin panel access
 
 	// SSO Braterstwo
 	BratHashSecret        string
@@ -29,6 +30,14 @@ type Config struct {
 }
 
 func Load() *Config {
+	adminNicks := []string{"KS Amator", "gruby wonsz"}
+	if v := os.Getenv("ADMIN_NICKS"); v != "" {
+		adminNicks = strings.Split(v, ",")
+		for i := range adminNicks {
+			adminNicks[i] = strings.TrimSpace(adminNicks[i])
+		}
+	}
+
 	cfg := &Config{
 		Port:               getEnv("PORT", "8080"),
 		DataDir:            getEnv("DATA_DIR", "./data"),
@@ -39,6 +48,7 @@ func Load() *Config {
 		KeepOriginalFormat: getEnvBool("KEEP_ORIGINAL_FORMAT", true),
 		AllowedOrigins:     parseOrigins(getEnv("ALLOWED_ORIGINS", "")),
 		PublicUpload:       getEnvBool("PUBLIC_UPLOAD", true),
+		AdminNicks:         adminNicks,
 
 		BratHashSecret:        getEnv("BRAT_HASH_SECRET", ""),
 		BratEncryptionKey:     getEnv("BRAT_ENCRYPTION_KEY", ""),
