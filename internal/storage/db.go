@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -37,6 +38,7 @@ type Image struct {
 	UserID       *int64
 	CreatedAt    int64
 	AccessedAt   int64
+	Downloads    int64
 	GalleryID    *int64
 }
 
@@ -169,14 +171,20 @@ func (db *DB) migrate() error {
 		}
 	}
 
+	// Migration: add downloads column if missing
+	_, err = db.conn.Exec(`ALTER TABLE images ADD COLUMN downloads INTEGER NOT NULL DEFAULT 0`)
+	if err != nil && !strings.Contains(err.Error(), "duplicate column") {
+		return fmt.Errorf("migrate downloads: %w", err)
+	}
+
 	return nil
 }
 
 func (db *DB) InsertImage(img *Image) (int64, error) {
 	res, err := db.conn.Exec(`
-		INSERT INTO images (slug, original_name, mime_type, file_size, width, height, user_id, created_at, accessed_at, gallery_id)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		img.Slug, img.OriginalName, img.MimeType, img.FileSize, img.Width, img.Height, img.UserID, img.CreatedAt, img.AccessedAt, img.GalleryID)
+		INSERT INTO images (slug, original_name, mime_type, file_size, width, height, user_id, created_at, accessed_at, downloads, gallery_id)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		img.Slug, img.OriginalName, img.MimeType, img.FileSize, img.Width, img.Height, img.UserID, img.CreatedAt, img.AccessedAt, img.Downloads, img.GalleryID)
 	if err != nil {
 		return 0, err
 	}
@@ -186,10 +194,10 @@ func (db *DB) InsertImage(img *Image) (int64, error) {
 func (db *DB) GetImageBySlug(slug string) (*Image, error) {
 	img := &Image{}
 	err := db.conn.QueryRow(`
-		SELECT id, slug, original_name, mime_type, file_size, width, height, user_id, created_at, accessed_at, gallery_id
+		SELECT id, slug, original_name, mime_type, file_size, width, height, user_id, created_at, accessed_at, downloads, gallery_id
 		FROM images WHERE slug = ?`, slug).Scan(
 		&img.ID, &img.Slug, &img.OriginalName, &img.MimeType, &img.FileSize, &img.Width, &img.Height,
-		&img.UserID, &img.CreatedAt, &img.AccessedAt, &img.GalleryID)
+		&img.UserID, &img.CreatedAt, &img.AccessedAt, &img.Downloads, &img.GalleryID)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -411,7 +419,7 @@ func hashSessionToken(token string) string {
 
 func (db *DB) GetGalleryImages(galleryID int64) ([]*Image, error) {
 	rows, err := db.conn.Query(`
-		SELECT id, slug, original_name, mime_type, file_size, width, height, user_id, created_at, accessed_at, gallery_id
+		SELECT id, slug, original_name, mime_type, file_size, width, height, user_id, created_at, accessed_at, downloads, gallery_id
 		FROM images WHERE gallery_id = ? ORDER BY created_at`, galleryID)
 	if err != nil {
 		return nil, err
@@ -422,7 +430,7 @@ func (db *DB) GetGalleryImages(galleryID int64) ([]*Image, error) {
 	for rows.Next() {
 		img := &Image{}
 		if err := rows.Scan(&img.ID, &img.Slug, &img.OriginalName, &img.MimeType, &img.FileSize, &img.Width, &img.Height,
-			&img.UserID, &img.CreatedAt, &img.AccessedAt, &img.GalleryID); err != nil {
+			&img.UserID, &img.CreatedAt, &img.AccessedAt, &img.Downloads, &img.GalleryID); err != nil {
 			return nil, err
 		}
 		images = append(images, img)
@@ -438,7 +446,7 @@ func (db *DB) GetGalleryImagesPaginated(galleryID int64, limit, offset int) ([]*
 	}
 
 	rows, err := db.conn.Query(`
-		SELECT id, slug, original_name, mime_type, file_size, width, height, user_id, created_at, accessed_at, gallery_id
+		SELECT id, slug, original_name, mime_type, file_size, width, height, user_id, created_at, accessed_at, downloads, gallery_id
 		FROM images WHERE gallery_id = ?
 		ORDER BY created_at DESC
 		LIMIT ? OFFSET ?
@@ -452,7 +460,7 @@ func (db *DB) GetGalleryImagesPaginated(galleryID int64, limit, offset int) ([]*
 	for rows.Next() {
 		img := &Image{}
 		if err := rows.Scan(&img.ID, &img.Slug, &img.OriginalName, &img.MimeType, &img.FileSize, &img.Width, &img.Height,
-			&img.UserID, &img.CreatedAt, &img.AccessedAt, &img.GalleryID); err != nil {
+			&img.UserID, &img.CreatedAt, &img.AccessedAt, &img.Downloads, &img.GalleryID); err != nil {
 			return nil, 0, err
 		}
 		images = append(images, img)
@@ -468,7 +476,7 @@ func (db *DB) DeleteImageBySlug(slug string) error {
 
 func (db *DB) GetOldestImages(limit int) ([]*Image, error) {
 	rows, err := db.conn.Query(`
-		SELECT id, slug, original_name, mime_type, file_size, width, height, user_id, created_at, accessed_at, gallery_id
+		SELECT id, slug, original_name, mime_type, file_size, width, height, user_id, created_at, accessed_at, downloads, gallery_id
 		FROM images ORDER BY created_at ASC LIMIT ?`, limit)
 	if err != nil {
 		return nil, err
@@ -479,7 +487,7 @@ func (db *DB) GetOldestImages(limit int) ([]*Image, error) {
 	for rows.Next() {
 		img := &Image{}
 		if err := rows.Scan(&img.ID, &img.Slug, &img.OriginalName, &img.MimeType, &img.FileSize, &img.Width, &img.Height,
-			&img.UserID, &img.CreatedAt, &img.AccessedAt, &img.GalleryID); err != nil {
+			&img.UserID, &img.CreatedAt, &img.AccessedAt, &img.Downloads, &img.GalleryID); err != nil {
 			return nil, err
 		}
 		images = append(images, img)
