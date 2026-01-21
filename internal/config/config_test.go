@@ -14,6 +14,8 @@ func TestLoad_Defaults(t *testing.T) {
 	os.Unsetenv("CLEANUP_TARGET_GB")
 	os.Unsetenv("BASE_URL")
 	os.Unsetenv("KEEP_ORIGINAL_FORMAT")
+	os.Unsetenv("ALLOWED_ORIGINS")
+	os.Unsetenv("PUBLIC_UPLOAD")
 	os.Unsetenv("BRAT_HASH_SECRET")
 	os.Unsetenv("BRAT_ENCRYPTION_KEY")
 	os.Unsetenv("BRAT_ENCRYPTION_IV")
@@ -45,6 +47,12 @@ func TestLoad_Defaults(t *testing.T) {
 	}
 	if !cfg.KeepOriginalFormat {
 		t.Errorf("KeepOriginalFormat = %v, want true", cfg.KeepOriginalFormat)
+	}
+	if cfg.AllowedOrigins != nil {
+		t.Errorf("AllowedOrigins = %v, want nil", cfg.AllowedOrigins)
+	}
+	if !cfg.PublicUpload {
+		t.Errorf("PublicUpload = %v, want true", cfg.PublicUpload)
 	}
 	if cfg.BratCipher != "AES-256-CBC" {
 		t.Errorf("BratCipher = %q, want %q", cfg.BratCipher, "AES-256-CBC")
@@ -195,5 +203,82 @@ func TestLoad_CleanupTargetValidation_Equal(t *testing.T) {
 	expected := 50.0 * 0.9
 	if cfg.CleanupTarget != expected {
 		t.Errorf("CleanupTarget = %v, want %v (90%% of MaxDiskGB)", cfg.CleanupTarget, expected)
+	}
+}
+
+func TestParseOrigins(t *testing.T) {
+	tests := []struct {
+		input string
+		want  []string
+	}{
+		{"", nil},
+		{"example.com", []string{"example.com"}},
+		{"a.com,b.com", []string{"a.com", "b.com"}},
+		{"a.com, b.com, c.com", []string{"a.com", "b.com", "c.com"}},
+		{" a.com , b.com ", []string{"a.com", "b.com"}},
+	}
+
+	for _, tt := range tests {
+		got := parseOrigins(tt.input)
+		if len(got) != len(tt.want) {
+			t.Errorf("parseOrigins(%q) = %v, want %v", tt.input, got, tt.want)
+			continue
+		}
+		for i := range got {
+			if got[i] != tt.want[i] {
+				t.Errorf("parseOrigins(%q)[%d] = %q, want %q", tt.input, i, got[i], tt.want[i])
+			}
+		}
+	}
+}
+
+func TestIsOriginAllowed(t *testing.T) {
+	tests := []struct {
+		allowed []string
+		origin  string
+		want    bool
+	}{
+		{nil, "https://any.com", true},                                     // no restrictions
+		{[]string{}, "https://any.com", true},                              // empty = no restrictions
+		{[]string{"example.com"}, "https://example.com", true},             // exact match
+		{[]string{"example.com"}, "https://sub.example.com", true},         // subdomain
+		{[]string{"example.com"}, "https://evil.com", false},               // not allowed
+		{[]string{"a.com", "b.com"}, "https://a.com", true},                // multiple allowed
+		{[]string{"a.com", "b.com"}, "https://c.com", false},               // not in list
+		{[]string{"localhost"}, "http://localhost:3000", true},             // localhost with port
+		{[]string{"braterstwo.eu"}, "https://forum.braterstwo.eu", true},   // subdomain match
+	}
+
+	for _, tt := range tests {
+		cfg := &Config{AllowedOrigins: tt.allowed}
+		got := cfg.IsOriginAllowed(tt.origin)
+		if got != tt.want {
+			t.Errorf("IsOriginAllowed(%v, %q) = %v, want %v", tt.allowed, tt.origin, got, tt.want)
+		}
+	}
+}
+
+func TestLoad_AllowedOrigins(t *testing.T) {
+	os.Setenv("ALLOWED_ORIGINS", "braterstwo.eu,localhost")
+	defer os.Unsetenv("ALLOWED_ORIGINS")
+
+	cfg := Load()
+
+	if len(cfg.AllowedOrigins) != 2 {
+		t.Errorf("AllowedOrigins length = %d, want 2", len(cfg.AllowedOrigins))
+	}
+	if cfg.AllowedOrigins[0] != "braterstwo.eu" {
+		t.Errorf("AllowedOrigins[0] = %q, want %q", cfg.AllowedOrigins[0], "braterstwo.eu")
+	}
+}
+
+func TestLoad_PublicUpload(t *testing.T) {
+	os.Setenv("PUBLIC_UPLOAD", "false")
+	defer os.Unsetenv("PUBLIC_UPLOAD")
+
+	cfg := Load()
+
+	if cfg.PublicUpload {
+		t.Error("PublicUpload = true, want false")
 	}
 }

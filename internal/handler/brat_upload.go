@@ -35,7 +35,7 @@ type BratUploadResponse struct {
 
 func (h *BratUploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	origin := r.Header.Get("Origin")
-	if strings.Contains(origin, "braterstwo.eu") || strings.Contains(origin, "localhost") {
+	if h.cfg.IsOriginAllowed(origin) {
 		w.Header().Set("Access-Control-Allow-Origin", origin)
 		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")

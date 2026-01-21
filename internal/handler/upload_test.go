@@ -25,6 +25,7 @@ func testSetup(t *testing.T) (*config.Config, *storage.DB, *storage.Filesystem, 
 		MaxDiskGB:     1.0,
 		CleanupTarget: 0.5,
 		BaseURL:       "http://test.local",
+		PublicUpload:  true,
 	}
 
 	db, err := storage.NewDB(dir)

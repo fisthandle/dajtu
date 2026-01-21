@@ -42,6 +42,11 @@ func (h *UploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !h.cfg.PublicUpload {
+		jsonError(w, "public upload disabled", http.StatusForbidden)
+		return
+	}
+
 	// Limit request body
 	r.Body = http.MaxBytesReader(w, r.Body, int64(h.cfg.MaxFileSizeMB)*1024*1024)
 

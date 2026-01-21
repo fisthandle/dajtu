@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"strconv"
+	"strings"
 )
 
 type Config struct {
@@ -13,6 +14,8 @@ type Config struct {
 	CleanupTarget      float64
 	BaseURL            string
 	KeepOriginalFormat bool
+	AllowedOrigins     []string // CORS allowed origins
+	PublicUpload       bool     // allow upload without login
 
 	// SSO Braterstwo
 	BratHashSecret        string
@@ -34,6 +37,8 @@ func Load() *Config {
 		CleanupTarget:      getEnvFloat("CLEANUP_TARGET_GB", 45.0),
 		BaseURL:            getEnv("BASE_URL", ""),
 		KeepOriginalFormat: getEnvBool("KEEP_ORIGINAL_FORMAT", true),
+		AllowedOrigins:     parseOrigins(getEnv("ALLOWED_ORIGINS", "")),
+		PublicUpload:       getEnvBool("PUBLIC_UPLOAD", true),
 
 		BratHashSecret:        getEnv("BRAT_HASH_SECRET", ""),
 		BratEncryptionKey:     getEnv("BRAT_ENCRYPTION_KEY", ""),
@@ -83,4 +88,30 @@ func getEnvBool(key string, fallback bool) bool {
 		return v == "true" || v == "1"
 	}
 	return fallback
+}
+
+func parseOrigins(s string) []string {
+	if s == "" {
+		return nil
+	}
+	origins := strings.Split(s, ",")
+	result := make([]string, 0, len(origins))
+	for _, o := range origins {
+		if trimmed := strings.TrimSpace(o); trimmed != "" {
+			result = append(result, trimmed)
+		}
+	}
+	return result
+}
+
+func (c *Config) IsOriginAllowed(origin string) bool {
+	if len(c.AllowedOrigins) == 0 {
+		return true // no restrictions if not configured
+	}
+	for _, allowed := range c.AllowedOrigins {
+		if strings.Contains(origin, allowed) {
+			return true
+		}
+	}
+	return false
 }

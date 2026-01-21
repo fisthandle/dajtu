@@ -54,6 +54,8 @@ func TestConfig(t *testing.T) *config.Config {
 		CleanupTarget:      0.5,
 		BaseURL:            "http://localhost:8080",
 		KeepOriginalFormat: true,
+		AllowedOrigins:     []string{"braterstwo.eu", "localhost"},
+		PublicUpload:       true,
 	}
 }
 
