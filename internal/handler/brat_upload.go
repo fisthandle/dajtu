@@ -3,7 +3,6 @@ package handler
 import (
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -122,36 +121,11 @@ func (h *BratUploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	externalID := fmt.Sprintf("brat-%s", entryID)
-	gallery, err := h.db.GetGalleryByExternalID(externalID)
+	gallery, err := h.db.GetOrCreateBratGallery(dbUser.ID, dbUser.Slug, entryID, title)
 	if err != nil {
-		log.Printf("get gallery error: %v", err)
-		jsonError(w, "database error", http.StatusInternalServerError)
+		log.Printf("get/create gallery error: %v", err)
+		jsonError(w, "gallery creation failed", http.StatusInternalServerError)
 		return
-	}
-
-	if gallery == nil {
-		gallerySlug := h.db.GenerateUniqueSlug("galleries", 4)
-		editToken, _ := generateEditToken()
-		now := time.Now().Unix()
-
-		gallery = &storage.Gallery{
-			Slug:       gallerySlug,
-			EditToken:  editToken,
-			Title:      title,
-			UserID:     &dbUser.ID,
-			ExternalID: &externalID,
-			CreatedAt:  now,
-			UpdatedAt:  now,
-		}
-
-		galleryID, err := h.db.InsertGallery(gallery)
-		if err != nil {
-			log.Printf("insert gallery error: %v", err)
-			jsonError(w, "gallery creation failed", http.StatusInternalServerError)
-			return
-		}
-		gallery.ID = galleryID
 	}
 
 	slug := h.db.GenerateUniqueSlug("images", 5)
