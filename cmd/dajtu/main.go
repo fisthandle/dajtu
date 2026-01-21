@@ -114,6 +114,11 @@ func main() {
 			return
 		}
 
+		go func() {
+			_ = db.TouchImageBySlug(slug)
+			_ = db.IncrementDownloads(slug)
+		}()
+
 		if len(parts) == 2 && parts[1] == "original" {
 			uploadHandler.ServeOriginal(w, r, slug)
 			return

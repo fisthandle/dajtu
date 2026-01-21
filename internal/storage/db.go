@@ -209,6 +209,11 @@ func (db *DB) TouchImageBySlug(slug string) error {
 	return err
 }
 
+func (db *DB) IncrementDownloads(slug string) error {
+	_, err := db.conn.Exec(`UPDATE images SET downloads = downloads + 1 WHERE slug = ?`, slug)
+	return err
+}
+
 func (db *DB) InsertGallery(g *Gallery) (int64, error) {
 	res, err := db.conn.Exec(`
 		INSERT INTO galleries (slug, edit_token, title, description, user_id, external_id, created_at, updated_at)
