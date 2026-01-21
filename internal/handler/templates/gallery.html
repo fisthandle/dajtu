@@ -35,7 +35,9 @@
             height: 100%;
             object-fit: cover;
             transition: transform 0.2s;
+            background: #222;
         }
+        .gallery-item img[data-src] { opacity: 0.3; }
         .gallery-item:hover img { transform: scale(1.05); }
         .delete-btn {
             display: none;
@@ -65,14 +67,52 @@
             align-items: center;
         }
         .lightbox.active { display: flex; }
-        .lightbox img { max-width: 95vw; max-height: 95vh; }
+        .lightbox-img {
+            max-width: 95vw;
+            max-height: 95vh;
+            user-select: none;
+        }
         .lightbox-close {
             position: absolute;
             top: 20px;
             right: 20px;
-            font-size: 30px;
+            width: 40px;
+            height: 40px;
+            border: none;
+            background: transparent;
+            font-size: 40px;
             color: #fff;
             cursor: pointer;
+            line-height: 1;
+        }
+        .lightbox-close:hover { color: #ff4444; }
+        .lightbox-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 60px;
+            height: 60px;
+            border: none;
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            font-size: 40px;
+            cursor: pointer;
+            border-radius: 50%;
+            transition: background 0.2s;
+        }
+        .lightbox-nav:hover { background: rgba(255,255,255,0.2); }
+        .lightbox-prev { left: 20px; }
+        .lightbox-next { right: 20px; }
+        .lightbox-counter {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 8px 16px;
+            background: rgba(0,0,0,0.7);
+            border-radius: 20px;
+            font-size: 14px;
+            color: #fff;
         }
         .edit-panel {
             margin-bottom: 30px;
@@ -158,8 +198,8 @@
             {{range .Images}}
             <div class="gallery-item" data-slug="{{.Slug}}">
                 <button class="delete-btn" title="Usuń">&times;</button>
-                <a href="{{.URL}}" data-lightbox>
-                    <img src="{{.ThumbURL}}" alt="" loading="lazy">
+                <a href="{{.URL}}" data-lightbox data-full="{{.URL}}">
+                    <img data-src="{{.ThumbURL}}" alt="" loading="lazy">
                 </a>
             </div>
             {{end}}
@@ -167,8 +207,11 @@
     </div>
 
     <div class="lightbox" id="lightbox">
-        <span class="lightbox-close">&times;</span>
-        <img src="" alt="">
+        <button class="lightbox-close">&times;</button>
+        <button class="lightbox-nav lightbox-prev">&#8249;</button>
+        <img class="lightbox-img" src="" alt="">
+        <button class="lightbox-nav lightbox-next">&#8250;</button>
+        <div class="lightbox-counter"></div>
     </div>
 
     <script>
@@ -179,7 +222,14 @@
         const addFiles = document.getElementById('addFiles');
         const gallery = document.getElementById('gallery');
         const lightbox = document.getElementById('lightbox');
-        const lightboxImg = lightbox.querySelector('img');
+        const lightboxImg = lightbox.querySelector('.lightbox-img');
+        const lightboxClose = lightbox.querySelector('.lightbox-close');
+        const lightboxPrev = lightbox.querySelector('.lightbox-prev');
+        const lightboxNext = lightbox.querySelector('.lightbox-next');
+        const lightboxCounter = lightbox.querySelector('.lightbox-counter');
+
+        let currentIndex = 0;
+        let images = [];
 
         // Check URL for token
         const params = new URLSearchParams(location.search);
@@ -203,16 +253,99 @@
             }
         });
 
+        // Lazy loading
+        const observer = new IntersectionObserver(entries => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const img = entry.target;
+                    if (img.dataset.src) {
+                        img.src = img.dataset.src;
+                        delete img.dataset.src;
+                        observer.unobserve(img);
+                    }
+                }
+            });
+        }, { rootMargin: '50px' });
+
+        document.querySelectorAll('img[data-src]').forEach(img => observer.observe(img));
+
+        // Build images array
+        images = Array.from(document.querySelectorAll('[data-lightbox]')).map(a => ({
+            full: a.dataset.full,
+            link: a
+        }));
+
         // Lightbox
-        document.querySelectorAll('[data-lightbox]').forEach(a => {
-            a.addEventListener('click', e => {
-                if (container.classList.contains('edit-mode')) return; // disable in edit mode
+        function openLightbox(index) {
+            if (container.classList.contains('edit-mode')) return;
+            currentIndex = index;
+            showImage();
+            lightbox.classList.add('active');
+            preloadAdjacent();
+        }
+
+        function showImage() {
+            if (currentIndex < 0) currentIndex = images.length - 1;
+            if (currentIndex >= images.length) currentIndex = 0;
+
+            lightboxImg.src = images[currentIndex].full;
+            lightboxCounter.textContent = `${currentIndex + 1} / ${images.length}`;
+            preloadAdjacent();
+        }
+
+        function preloadAdjacent() {
+            const prev = (currentIndex - 1 + images.length) % images.length;
+            const next = (currentIndex + 1) % images.length;
+            [prev, next].forEach(idx => {
+                const img = new Image();
+                img.src = images[idx].full;
+            });
+        }
+
+        images.forEach((img, idx) => {
+            img.link.addEventListener('click', e => {
                 e.preventDefault();
-                lightboxImg.src = a.href;
-                lightbox.classList.add('active');
+                openLightbox(idx);
             });
         });
-        lightbox.addEventListener('click', () => lightbox.classList.remove('active'));
+
+        lightboxClose.addEventListener('click', e => {
+            e.stopPropagation();
+            lightbox.classList.remove('active');
+        });
+
+        lightboxPrev.addEventListener('click', e => {
+            e.stopPropagation();
+            currentIndex--;
+            showImage();
+        });
+
+        lightboxNext.addEventListener('click', e => {
+            e.stopPropagation();
+            currentIndex++;
+            showImage();
+        });
+
+        lightbox.addEventListener('click', e => {
+            if (e.target === lightbox || e.target === lightboxImg) {
+                lightbox.classList.remove('active');
+            }
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', e => {
+            if (!lightbox.classList.contains('active')) return;
+
+            if (e.key === 'Escape') {
+                lightbox.classList.remove('active');
+            } else if (e.key === 'ArrowLeft') {
+                currentIndex--;
+                showImage();
+            } else if (e.key === 'ArrowRight') {
+                currentIndex++;
+                showImage();
+            }
+        });
 
         // Delete image
         gallery.addEventListener('click', async e => {
