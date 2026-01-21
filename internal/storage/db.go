@@ -133,7 +133,6 @@ func (db *DB) migrate() error {
 	CREATE INDEX IF NOT EXISTS idx_galleries_slug ON galleries(slug);
 	CREATE INDEX IF NOT EXISTS idx_galleries_user ON galleries(user_id);
 	CREATE INDEX IF NOT EXISTS idx_galleries_edit ON galleries(edit_token);
-	CREATE INDEX IF NOT EXISTS idx_galleries_external ON galleries(external_id);
 	CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
 	CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
 	`
