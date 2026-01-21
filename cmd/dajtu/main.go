@@ -14,6 +14,18 @@ import (
 	"dajtu/internal/storage"
 )
 
+func isValidSlug(s string) bool {
+	if len(s) < 2 || len(s) > 10 {
+		return false
+	}
+	for _, c := range s {
+		if !((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')) {
+			return false
+		}
+	}
+	return true
+}
+
 func main() {
 	cfg := config.Load()
 
@@ -97,7 +109,7 @@ func main() {
 		}
 
 		slug := strings.TrimSuffix(parts[0], ".webp")
-		if len(slug) < 2 {
+		if !isValidSlug(slug) {
 			http.NotFound(w, r)
 			return
 		}

@@ -362,7 +362,7 @@ func TestBratUpload_InvalidImageFormat(t *testing.T) {
 func TestBratUpload_GenerateFunctions(t *testing.T) {
 	db, _ := testutil.TestDB(t)
 
-	slug := generateUniqueSlug(db, "images", 5)
+	slug := db.GenerateUniqueSlug( "images", 5)
 	if len(slug) != 5 {
 		t.Errorf("slug length = %d, want 5", len(slug))
 	}
@@ -372,7 +372,7 @@ func TestBratUpload_GenerateFunctions(t *testing.T) {
 		t.Error("generated slug should not exist")
 	}
 
-	token := generateEditToken()
+	token, _ := generateEditToken()
 	if len(token) != 32 {
 		t.Errorf("token length = %d, want 32", len(token))
 	}

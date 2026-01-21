@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"path/filepath"
@@ -76,7 +75,7 @@ func (h *UploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Generate unique slug (5 chars for images)
-	slug := h.generateUniqueSlug("images", 5)
+	slug := h.db.GenerateUniqueSlug("images", 5)
 
 	var originalSize int64
 	if h.cfg.KeepOriginalFormat {
@@ -131,18 +130,11 @@ func (h *UploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Build response
-	baseURL := h.cfg.BaseURL
-	if baseURL == "" {
-		baseURL = fmt.Sprintf("http://%s", r.Host)
-	}
+	baseURL := getBaseURL(h.cfg, r)
 
 	sizes := make(map[string]string)
 	for _, res := range results {
-		if res.Name == "original" {
-			sizes[res.Name] = fmt.Sprintf("%s/i/%s.webp", baseURL, slug)
-		} else {
-			sizes[res.Name] = fmt.Sprintf("%s/i/%s/%s.webp", baseURL, slug, res.Name)
-		}
+		sizes[res.Name] = buildImageURL(baseURL, slug, res.Name)
 	}
 
 	resp := UploadResponse{
@@ -153,23 +145,6 @@ func (h *UploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
-}
-
-func (h *UploadHandler) generateUniqueSlug(table string, length int) string {
-	// Generate 20 candidates at once to minimize DB queries
-	candidates := make([]string, 20)
-	for i := range candidates {
-		candidates[i] = storage.GenerateSlug(length)
-	}
-
-	for _, slug := range candidates {
-		exists, _ := h.db.SlugExists(table, slug)
-		if !exists {
-			return slug
-		}
-	}
-	// Fallback: try again (extremely unlikely to reach here)
-	return h.generateUniqueSlug(table, length)
 }
 
 func (h *UploadHandler) ServeOriginal(w http.ResponseWriter, r *http.Request, slug string) {
@@ -188,10 +163,4 @@ func (h *UploadHandler) ServeOriginal(w http.ResponseWriter, r *http.Request, sl
 	w.Header().Set("Content-Type", contentType)
 	w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 	http.ServeFile(w, r, path)
-}
-
-func jsonError(w http.ResponseWriter, msg string, code int) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(code)
-	json.NewEncoder(w).Encode(map[string]string{"error": msg})
 }

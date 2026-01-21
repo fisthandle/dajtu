@@ -149,7 +149,7 @@ func TestUploadHandler_GenerateUniqueSlug(t *testing.T) {
 
 	h := NewUploadHandler(cfg, db, fs)
 
-	slug := h.generateUniqueSlug("images", 5)
+	slug := h.db.GenerateUniqueSlug("images", 5)
 	if len(slug) != 5 {
 		t.Errorf("slug length = %d, want 5", len(slug))
 	}
@@ -181,7 +181,7 @@ func TestUploadHandler_GenerateUniqueSlug_Collision(t *testing.T) {
 	}
 
 	// Should still generate unique slug
-	slug := h.generateUniqueSlug("images", 5)
+	slug := h.db.GenerateUniqueSlug("images", 5)
 	exists, _ := db.SlugExists("images", slug)
 	if exists {
 		t.Error("generated slug should be unique")

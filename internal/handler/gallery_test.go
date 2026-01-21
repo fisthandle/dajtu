@@ -436,7 +436,7 @@ func TestGalleryHandler_GenerateUniqueSlug(t *testing.T) {
 
 	h := NewGalleryHandler(cfg, db, fs)
 
-	slug := h.generateUniqueSlug("galleries", 4)
+	slug := h.db.GenerateUniqueSlug("galleries", 4)
 	if len(slug) != 4 {
 		t.Errorf("slug length = %d, want 4", len(slug))
 	}

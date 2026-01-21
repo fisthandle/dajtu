@@ -440,3 +440,25 @@ func (db *DB) SlugExists(table, slug string) (bool, error) {
 func (db *DB) Close() error {
 	return db.conn.Close()
 }
+
+// GenerateUniqueSlug generuje unikalny slug dla tabeli
+func (db *DB) GenerateUniqueSlug(table string, length int) string {
+	// Whitelist tabel dla bezpieczeństwa
+	validTables := map[string]bool{"images": true, "galleries": true, "users": true}
+	if !validTables[table] {
+		return GenerateSlug(length)
+	}
+
+	candidates := make([]string, 20)
+	for i := range candidates {
+		candidates[i] = GenerateSlug(length)
+	}
+
+	for _, slug := range candidates {
+		exists, err := db.SlugExists(table, slug)
+		if err == nil && !exists {
+			return slug
+		}
+	}
+	return db.GenerateUniqueSlug(table, length)
+}

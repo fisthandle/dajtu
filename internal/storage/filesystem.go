@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 type Filesystem struct {
@@ -33,7 +34,9 @@ func NewFilesystem(baseDir string) (*Filesystem, error) {
 
 func GenerateSlug(length int) string {
 	b := make([]byte, length/2+1)
-	rand.Read(b)
+	if _, err := rand.Read(b); err != nil {
+		return fmt.Sprintf("%x", time.Now().UnixNano())[:length]
+	}
 	return hex.EncodeToString(b)[:length]
 }
 

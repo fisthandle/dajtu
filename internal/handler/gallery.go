@@ -80,8 +80,8 @@ func (h *GalleryHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create gallery (4-char slug)
-	gallerySlug := h.generateUniqueSlug("galleries", 4)
-	editToken := storage.GenerateSlug(32)
+	gallerySlug := h.db.GenerateUniqueSlug("galleries", 4)
+	editToken, _ := generateEditToken()
 	now := time.Now().Unix()
 
 	var userID *int64
@@ -106,10 +106,7 @@ func (h *GalleryHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	baseURL := h.cfg.BaseURL
-	if baseURL == "" {
-		baseURL = "http://" + r.Host
-	}
+	baseURL := getBaseURL(h.cfg, r)
 
 	var uploadedImages []UploadResponse
 
@@ -126,7 +123,7 @@ func (h *GalleryHandler) Create(w http.ResponseWriter, r *http.Request) {
 			continue // skip invalid files
 		}
 
-		slug := h.generateUniqueSlug("images", 5)
+		slug := h.db.GenerateUniqueSlug("images", 5)
 
 		var originalSize int64
 		if h.cfg.KeepOriginalFormat {
@@ -172,11 +169,7 @@ func (h *GalleryHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 		sizes := make(map[string]string)
 		for _, res := range results {
-			if res.Name == "original" {
-				sizes[res.Name] = baseURL + "/i/" + slug + ".webp"
-			} else {
-				sizes[res.Name] = baseURL + "/i/" + slug + "/" + res.Name + ".webp"
-			}
+			sizes[res.Name] = buildImageURL(baseURL, slug, res.Name)
 		}
 
 		uploadedImages = append(uploadedImages, UploadResponse{
@@ -249,10 +242,7 @@ func (h *GalleryHandler) AddImages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	baseURL := h.cfg.BaseURL
-	if baseURL == "" {
-		baseURL = "http://" + r.Host
-	}
+	baseURL := getBaseURL(h.cfg, r)
 
 	now := time.Now().Unix()
 	var uploadedImages []UploadResponse
@@ -270,7 +260,7 @@ func (h *GalleryHandler) AddImages(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		slug := h.generateUniqueSlug("images", 5)
+		slug := h.db.GenerateUniqueSlug("images", 5)
 
 		var originalSize int64
 		if h.cfg.KeepOriginalFormat {
@@ -316,11 +306,7 @@ func (h *GalleryHandler) AddImages(w http.ResponseWriter, r *http.Request) {
 
 		sizes := make(map[string]string)
 		for _, res := range results {
-			if res.Name == "original" {
-				sizes[res.Name] = baseURL + "/i/" + slug + ".webp"
-			} else {
-				sizes[res.Name] = baseURL + "/i/" + slug + "/" + res.Name + ".webp"
-			}
+			sizes[res.Name] = buildImageURL(baseURL, slug, res.Name)
 		}
 
 		uploadedImages = append(uploadedImages, UploadResponse{
@@ -406,10 +392,7 @@ func (h *GalleryHandler) View(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	baseURL := h.cfg.BaseURL
-	if baseURL == "" {
-		baseURL = "http://" + r.Host
-	}
+	baseURL := getBaseURL(h.cfg, r)
 
 	type ImageData struct {
 		Slug     string
@@ -448,17 +431,3 @@ func (h *GalleryHandler) View(w http.ResponseWriter, r *http.Request) {
 	h.galleryTmpl.Execute(w, data)
 }
 
-func (h *GalleryHandler) generateUniqueSlug(table string, length int) string {
-	candidates := make([]string, 20)
-	for i := range candidates {
-		candidates[i] = storage.GenerateSlug(length)
-	}
-
-	for _, slug := range candidates {
-		exists, _ := h.db.SlugExists(table, slug)
-		if !exists {
-			return slug
-		}
-	}
-	return h.generateUniqueSlug(table, length)
-}

@@ -1,9 +1,7 @@
 package handler
 
 import (
-	"crypto/rand"
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -133,8 +131,8 @@ func (h *BratUploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if gallery == nil {
-		gallerySlug := generateUniqueSlug(h.db, "galleries", 4)
-		editToken := generateEditToken()
+		gallerySlug := h.db.GenerateUniqueSlug("galleries", 4)
+		editToken, _ := generateEditToken()
 		now := time.Now().Unix()
 
 		gallery = &storage.Gallery{
@@ -156,7 +154,7 @@ func (h *BratUploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		gallery.ID = galleryID
 	}
 
-	slug := generateUniqueSlug(h.db, "images", 5)
+	slug := h.db.GenerateUniqueSlug("images", 5)
 
 	var originalSize int64
 	if h.cfg.KeepOriginalFormat {
@@ -176,6 +174,7 @@ func (h *BratUploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	totalSize := originalSize
 	for _, res := range results {
 		if err := h.fs.Save(slug, res.Name, res.Data); err != nil {
 			log.Printf("save error: %v", err)
@@ -183,6 +182,7 @@ func (h *BratUploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			jsonError(w, "save failed", http.StatusInternalServerError)
 			return
 		}
+		totalSize += int64(len(res.Data))
 	}
 
 	now := time.Now().Unix()
@@ -190,7 +190,7 @@ func (h *BratUploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Slug:         slug,
 		OriginalName: header.Filename,
 		MimeType:     string(format),
-		FileSize:     originalSize,
+		FileSize:     totalSize,
 		Width:        results[0].Width,
 		Height:       results[0].Height,
 		UserID:       &dbUser.ID,
@@ -206,39 +206,15 @@ func (h *BratUploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	baseURL := h.cfg.BaseURL
-	if baseURL == "" {
-		baseURL = fmt.Sprintf("http://%s", r.Host)
-	}
+	baseURL := getBaseURL(h.cfg, r)
 
 	resp := BratUploadResponse{
-		URL:      fmt.Sprintf("%s/i/%s.webp", baseURL, slug),
-		ThumbURL: fmt.Sprintf("%s/i/%s/thumb.webp", baseURL, slug),
+		URL:      buildImageURL(baseURL, slug, "original"),
+		ThumbURL: buildImageURL(baseURL, slug, "thumb"),
 		Filename: header.Filename,
 		Slug:     slug,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
-}
-
-func generateUniqueSlug(db *storage.DB, table string, length int) string {
-	candidates := make([]string, 20)
-	for i := range candidates {
-		candidates[i] = storage.GenerateSlug(length)
-	}
-
-	for _, slug := range candidates {
-		exists, _ := db.SlugExists(table, slug)
-		if !exists {
-			return slug
-		}
-	}
-	return generateUniqueSlug(db, table, length)
-}
-
-func generateEditToken() string {
-	b := make([]byte, 16)
-	rand.Read(b)
-	return hex.EncodeToString(b)
 }
