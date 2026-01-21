@@ -137,8 +137,40 @@ func (db *DB) migrate() error {
 	CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
 	CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
 	`
-	_, err := db.conn.Exec(schema)
-	return err
+	if _, err := db.conn.Exec(schema); err != nil {
+		return err
+	}
+
+	// Migration: add external_id column if missing
+	var hasColumn bool
+	rows, err := db.conn.Query("PRAGMA table_info(galleries)")
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var cid int
+		var name, ctype string
+		var notnull, pk int
+		var dflt interface{}
+		if err := rows.Scan(&cid, &name, &ctype, &notnull, &dflt, &pk); err != nil {
+			return err
+		}
+		if name == "external_id" {
+			hasColumn = true
+			break
+		}
+	}
+	if !hasColumn {
+		if _, err := db.conn.Exec("ALTER TABLE galleries ADD COLUMN external_id TEXT"); err != nil {
+			return err
+		}
+		if _, err := db.conn.Exec("CREATE INDEX IF NOT EXISTS idx_galleries_external ON galleries(external_id)"); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (db *DB) InsertImage(img *Image) (int64, error) {
