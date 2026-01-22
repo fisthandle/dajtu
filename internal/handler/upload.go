@@ -379,3 +379,78 @@ func (h *ImageEditHandler) ServeHTTP(w http.ResponseWriter, r *http.Request, slu
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"slug": slug})
 }
+
+func (h *ImageEditHandler) RestoreOriginal(w http.ResponseWriter, r *http.Request, slug string) {
+	img, err := h.db.GetImageBySlug(slug)
+	if err != nil {
+		http.Error(w, "Not found", 404)
+		return
+	}
+
+	// Must be edited to restore
+	if !img.Edited {
+		http.Error(w, "Image not edited", 400)
+		return
+	}
+
+	// Must have backup
+	if !h.fs.HasBackup(slug) {
+		http.Error(w, "No backup available", 400)
+		return
+	}
+
+	// Check authorization
+	user := middleware.GetUser(r)
+	if user == nil || img.UserID == nil || user.ID != *img.UserID {
+		http.Error(w, "Forbidden", 403)
+		return
+	}
+
+	// Read backup and reprocess
+	backupData, err := h.fs.ReadBackup(slug)
+	if err != nil {
+		http.Error(w, "Restore error", 500)
+		return
+	}
+
+	// Reprocess all sizes from backup
+	results, err := h.processor.ProcessWithTransform(backupData, image.TransformParams{})
+	if err != nil {
+		http.Error(w, "Process error", 500)
+		return
+	}
+
+	// Save all sizes
+	for _, res := range results {
+		if err := h.fs.Save(slug, res.Name, res.Data); err != nil {
+			http.Error(w, "Save error", 500)
+			return
+		}
+	}
+
+	// Update metadata
+	totalSize := int64(0)
+	var origWidth, origHeight int
+	for _, res := range results {
+		totalSize += int64(len(res.Data))
+		if res.Name == "original" {
+			origWidth = res.Width
+			origHeight = res.Height
+		}
+	}
+	if origWidth > 0 && origHeight > 0 {
+		if err := h.db.UpdateImageMetadata(slug, origWidth, origHeight, totalSize); err != nil {
+			http.Error(w, "DB metadata update error", 500)
+			return
+		}
+	}
+
+	// Clear edited flag
+	if err := h.db.UnmarkImageEdited(slug); err != nil {
+		http.Error(w, "DB error", 500)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+}

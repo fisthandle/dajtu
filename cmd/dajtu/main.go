@@ -143,6 +143,16 @@ func main() {
 			return
 		}
 
+		// /i/{slug}/restore - restore original (POST)
+		if len(parts) == 2 && parts[1] == "restore" {
+			if r.Method != http.MethodPost {
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+				return
+			}
+			imageEditHandler.RestoreOriginal(w, r, slug)
+			return
+		}
+
 		// /i/{slug} - image view page (HTML)
 		if len(parts) == 1 && !strings.HasSuffix(parts[0], ".webp") {
 			imageViewHandler.ServeHTTP(w, r, slug)

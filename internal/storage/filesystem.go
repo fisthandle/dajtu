@@ -151,3 +151,25 @@ func (fs *Filesystem) SaveBackup(slug string) error {
 	}
 	return os.WriteFile(dstPath, data, 0644)
 }
+
+func (fs *Filesystem) RestoreFromBackup(slug string) error {
+	srcPath := filepath.Join(fs.DirPath(slug), "backup.webp")
+	dstPath := fs.Path(slug, "original")
+
+	data, err := os.ReadFile(srcPath)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(dstPath, data, 0644)
+}
+
+func (fs *Filesystem) HasBackup(slug string) bool {
+	path := filepath.Join(fs.DirPath(slug), "backup.webp")
+	_, err := os.Stat(path)
+	return err == nil
+}
+
+func (fs *Filesystem) ReadBackup(slug string) ([]byte, error) {
+	path := filepath.Join(fs.DirPath(slug), "backup.webp")
+	return os.ReadFile(path)
+}
