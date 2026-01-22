@@ -88,7 +88,7 @@
             </div>
             <div class="link-row">
                 <label>Link z edycją:</label>
-                <input type="text" readonly value="{{.BaseURL}}/g/{{.Slug}}?edit={{={{.EditToken}}}}" onclick="this.select()">
+                <input type="text" readonly value="{{.BaseURL}}/g/{{.Slug}}?edit={{.EditToken}}" onclick="this.select()">
                 <button onclick="copyLink(this)">Kopiuj</button>
             </div>
             {{end}}
