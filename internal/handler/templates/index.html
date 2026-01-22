@@ -789,60 +789,54 @@
             const title = titleInput.value.trim();
             const isSingleUpload = files.length === 1 && !title;
 
-            if (isSingleUpload) {
-                // Single image upload
-                formData.append('file', files[0]);
-                const params = getTransformParams();
-                if (params) {
-                    if (params.rotation) formData.append('rotation', params.rotation.toString());
-                    if (params.flipH) formData.append('flipH', 'true');
-                    if (params.flipV) formData.append('flipV', 'true');
-                    if (params.cropW > 0 && params.cropH > 0) {
-                        formData.append('cropX', params.cropX.toString());
-                        formData.append('cropY', params.cropY.toString());
-                        formData.append('cropW', params.cropW.toString());
-                        formData.append('cropH', params.cropH.toString());
-                    }
-                }
-                const res = await fetch('/upload', { method: 'POST', body: formData });
-                const data = await res.json();
+            if (title) {
+                formData.append('title', title);
+            }
 
-                if (data.error) {
-                    alert('Błąd: ' + data.error);
+            if (isSingleUpload) {
+                // Single file - use 'file' parameter
+                if (editedFiles[0] && editedFiles[0].blob) {
+                    formData.append('file', editedFiles[0].blob, files[0].name);
                 } else {
-                    document.getElementById('resultType').textContent = 'Obrazek';
-                    document.getElementById('resultLink').href = data.url;
-                    document.getElementById('resultLink').textContent = data.url;
-                    document.getElementById('resultUrls').innerHTML = `
-                        <p>Rozmiary:</p>
-                        <code>${Object.entries(data.sizes).map(([k,v]) => k + ': ' + v).join('\n')}</code>
-                    `;
-                    result.classList.add('show');
+                    formData.append('file', files[0]);
                 }
             } else {
-                // Gallery
-                [...files].forEach(f => formData.append('files', f));
-                if (title) formData.append('title', title);
-
-                const res = await fetch('/gallery', { method: 'POST', body: formData });
-                const data = await res.json();
-
-                if (data.error) {
-                    alert('Błąd: ' + data.error);
-                } else {
-                    document.getElementById('resultType').textContent = 'Galeria';
-                    document.getElementById('resultLink').href = data.url;
-                    document.getElementById('resultLink').textContent = data.url;
-                    document.getElementById('resultUrls').innerHTML = `
-                        <p>Edit token (zachowaj!):</p>
-                        <code>${data.edit_token}</code>
-                    `;
-                    result.classList.add('show');
+                // Gallery - use 'files' parameter
+                for (let i = 0; i < files.length; i++) {
+                    if (editedFiles[i] && editedFiles[i].blob) {
+                        formData.append('files', editedFiles[i].blob, files[i].name);
+                    } else {
+                        formData.append('files', files[i]);
+                    }
                 }
             }
 
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Wyślij';
+            // Wybierz endpoint
+            const endpoint = isSingleUpload ? '/upload' : '/gallery';
+
+            try {
+                const res = await fetch(endpoint, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    // Przekieruj do strony obrazka lub galerii
+                    if (data.slug) {
+                        window.location.href = `/i/${data.slug}`;
+                    } else if (data.gallery_slug) {
+                        window.location.href = `/g/${data.gallery_slug}`;
+                    }
+                } else {
+                    alert('Błąd uploadu');
+                }
+            } catch (err) {
+                alert('Błąd połączenia: ' + err.message);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Wyślij';
+            }
         });
     </script>
 </body>
