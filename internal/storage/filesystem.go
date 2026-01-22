@@ -140,3 +140,14 @@ func (fs *Filesystem) GetDiskUsage() (int64, error) {
 	})
 	return total, err
 }
+
+func (fs *Filesystem) SaveBackup(slug string) error {
+	srcPath := fs.Path(slug, "original")
+	dstPath := filepath.Join(fs.DirPath(slug), "backup.webp")
+
+	data, err := os.ReadFile(srcPath)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(dstPath, data, 0644)
+}

@@ -245,3 +245,133 @@ func (h *ImageViewHandler) ServeHTTP(w http.ResponseWriter, r *http.Request, slu
 
 	h.tmpl.ExecuteTemplate(w, "image.html", data)
 }
+
+type ImageEditHandler struct {
+	db   *storage.DB
+	fs   *storage.Filesystem
+	tmpl *template.Template
+	cfg  *config.Config
+}
+
+func NewImageEditHandler(db *storage.DB, fs *storage.Filesystem, tmpl *template.Template, cfg *config.Config) *ImageEditHandler {
+	return &ImageEditHandler{db: db, fs: fs, tmpl: tmpl, cfg: cfg}
+}
+
+func (h *ImageEditHandler) ServeHTTP(w http.ResponseWriter, r *http.Request, slug string) {
+	img, err := h.db.GetImageBySlug(slug)
+	if err != nil {
+		http.Error(w, "Not found", 404)
+		return
+	}
+
+	user := middleware.GetUser(r)
+	if user == nil || img.UserID == nil || user.ID != *img.UserID {
+		http.Error(w, "Forbidden", 403)
+		return
+	}
+
+	if r.Method == "GET" {
+		h.tmpl.ExecuteTemplate(w, "edit_image.html", map[string]interface{}{
+			"Image": img,
+		})
+		return
+	}
+
+	file, _, err := r.FormFile("file")
+	if err != nil {
+		http.Error(w, "No file", 400)
+		return
+	}
+	defer file.Close()
+
+	maxSize := int64(h.cfg.MaxFileSizeMB) * 1024 * 1024
+	_, data, err := image.ValidateAndDetect(file, maxSize)
+	if err != nil {
+		http.Error(w, "Invalid file", 400)
+		return
+	}
+
+	mode := r.FormValue("mode")
+
+	if mode == "new" {
+		newSlug := h.db.GenerateUniqueSlug("images", 5)
+
+		transformParams := parseTransformParams(r)
+		var results []image.ProcessResult
+		if transformParams.HasTransforms() {
+			results, err = image.ProcessWithTransform(data, transformParams)
+		} else {
+			results, err = image.Process(data)
+		}
+		if err != nil {
+			http.Error(w, "Process error", 500)
+			return
+		}
+
+		for _, res := range results {
+			if err := h.fs.Save(newSlug, res.Name, res.Data); err != nil {
+				h.fs.Delete(newSlug)
+				http.Error(w, "Save error", 500)
+				return
+			}
+		}
+
+		originalResult := results[0]
+		newImg := &storage.Image{
+			Slug:         newSlug,
+			OriginalName: img.OriginalName,
+			MimeType:     "image/webp",
+			FileSize:     int64(len(data)),
+			Width:        originalResult.Width,
+			Height:       originalResult.Height,
+			UserID:       &user.ID,
+			CreatedAt:    time.Now().Unix(),
+			AccessedAt:   time.Now().Unix(),
+			Edited:       true,
+			GalleryID:    img.GalleryID,
+		}
+
+		if _, err := h.db.InsertImage(newImg); err != nil {
+			h.fs.Delete(newSlug)
+			http.Error(w, "DB error", 500)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"slug": newSlug})
+		return
+	}
+
+	if !img.Edited {
+		if err := h.fs.SaveBackup(slug); err != nil {
+			log.Printf("backup failed: %v", err)
+		}
+	}
+
+	transformParams := parseTransformParams(r)
+	var results []image.ProcessResult
+	if transformParams.HasTransforms() {
+		results, err = image.ProcessWithTransform(data, transformParams)
+	} else {
+		results, err = image.Process(data)
+	}
+	if err != nil {
+		http.Error(w, "Process error", 500)
+		return
+	}
+
+	for _, res := range results {
+		if err := h.fs.Save(slug, res.Name, res.Data); err != nil {
+			http.Error(w, "Save error", 500)
+			return
+		}
+	}
+
+	if err := h.db.MarkImageEdited(slug); err != nil {
+		http.Error(w, "DB error", 500)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"slug": slug})
+}

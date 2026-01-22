@@ -61,6 +61,9 @@ func main() {
 	imageViewTmpl := template.Must(template.ParseFiles("internal/handler/templates/image.html"))
 	imageViewHandler := handler.NewImageViewHandler(db, imageViewTmpl, cfg.BaseURL)
 
+	editImageTmpl := template.Must(template.ParseFiles("internal/handler/templates/edit_image.html"))
+	imageEditHandler := handler.NewImageEditHandler(db, fs, editImageTmpl, cfg)
+
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/", galleryHandler.Index)
@@ -128,6 +131,12 @@ func main() {
 		slug := strings.TrimSuffix(parts[0], ".webp")
 		if !isValidSlug(slug) {
 			http.NotFound(w, r)
+			return
+		}
+
+		// /i/{slug}/edit - edit image (GET/POST)
+		if len(parts) == 2 && parts[1] == "edit" {
+			imageEditHandler.ServeHTTP(w, r, slug)
 			return
 		}
 
