@@ -107,6 +107,15 @@ Panel dostępny dla użytkowników z listy `ADMIN_NICKS` (domyślnie: "KS Amator
 | `/admin/galleries` | Lista galerii (z delete) |
 | `/admin/images` | Lista zdjęć (z delete i licznikiem pobrań) |
 
+## Lokalne uruchomienie
+
+```bash
+# Załaduj zmienne i uruchom
+set -a && source .env.local && set +a && ./dajtu
+```
+
+**Uwaga:** Bez zmiennych `BRAT_*` serwer nie wystartuje. Plik `.env.local` zawiera wszystkie wymagane zmienne.
+
 ## Troubleshooting
 
 ### CORS blokuje requesty z lokalnego dev

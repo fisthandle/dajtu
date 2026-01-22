@@ -427,18 +427,21 @@
         }
 
         function initEditor(file) {
+            console.log('initEditor called', file);
             destroyEditor();
-            const objectUrl = URL.createObjectURL(file);
-            editorImage.src = objectUrl;
-            editorImage.onload = () => {
-                URL.revokeObjectURL(objectUrl);
-                cropper = new Cropper(editorImage, {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                editorImage.src = e.target.result;
+                editorImage.onload = () => {
+                    console.log('editorImage loaded, creating Cropper');
+                    cropper = new Cropper(editorImage, {
                     viewMode: 1,
                     autoCropArea: 1,
                     background: false,
                     responsive: true,
                     checkOrientation: true,
                     ready() {
+                        console.log('Cropper ready!');
                         editorContainer.classList.add('active');
                         setAspectRatio(NaN);
                         saveState();
@@ -448,7 +451,9 @@
                         updateEditorUI();
                     }
                 });
+                };
             };
+            reader.readAsDataURL(file);
         }
 
         function updateEditorVisibility() {
