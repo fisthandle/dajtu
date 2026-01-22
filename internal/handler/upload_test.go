@@ -217,3 +217,48 @@ func TestUploadHandler_SavesOriginal(t *testing.T) {
 		t.Fatalf("original file not found: %v", err)
 	}
 }
+
+func TestUploadHandler_ResponseFields(t *testing.T) {
+	if _, err := image.Process(testutil.SampleJPEG()); err != nil {
+		t.Skipf("image processing unavailable: %v", err)
+	}
+
+	cfg, db, fs, cleanup := testSetup(t)
+	defer cleanup()
+
+	h := NewUploadHandler(cfg, db, fs, image.NewProcessor())
+
+	req := createMultipartRequest(t, "file", "test.jpg", testutil.SampleJPEG())
+	rec := httptest.NewRecorder()
+
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
+
+	var resp UploadResponse
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+
+	if resp.Slug == "" {
+		t.Error("expected Slug in response")
+	}
+
+	if resp.ViewURL == "" {
+		t.Error("expected ViewURL in response")
+	}
+
+	expectedViewURL := "http://test.local/i/" + resp.Slug
+	if resp.ViewURL != expectedViewURL {
+		t.Errorf("ViewURL = %q, want %q", resp.ViewURL, expectedViewURL)
+	}
+
+	if resp.EditToken == "" {
+		t.Error("expected EditToken in response")
+	}
+
+	if len(resp.Sizes) == 0 {
+		t.Error("expected Sizes in response")
+	}
+}

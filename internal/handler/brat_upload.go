@@ -28,6 +28,7 @@ func NewBratUploadHandler(cfg *config.Config, db *storage.DB, fs *storage.Filesy
 
 type BratUploadResponse struct {
 	URL      string `json:"url"`
+	ViewURL  string `json:"view_url"`
 	ThumbURL string `json:"thumbUrl"`
 	Filename string `json:"filename"`
 	Slug     string `json:"slug"`
@@ -185,6 +186,7 @@ func (h *BratUploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	resp := BratUploadResponse{
 		URL:      buildImageURL(baseURL, slug, "original"),
+		ViewURL:  baseURL + "/i/" + slug,
 		ThumbURL: buildImageURL(baseURL, slug, "thumb"),
 		Filename: header.Filename,
 		Slug:     slug,

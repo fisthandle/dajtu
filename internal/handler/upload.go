@@ -29,6 +29,7 @@ func NewUploadHandler(cfg *config.Config, db *storage.DB, fs *storage.Filesystem
 type UploadResponse struct {
 	Slug      string            `json:"slug"`
 	URL       string            `json:"url,omitempty"`
+	ViewURL   string            `json:"view_url,omitempty"`
 	Sizes     map[string]string `json:"sizes,omitempty"`
 	EditToken string            `json:"edit_token,omitempty"`
 }
@@ -197,6 +198,7 @@ func (h *UploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	resp := UploadResponse{
 		Slug:      slug,
 		URL:       sizes["original"],
+		ViewURL:   baseURL + "/i/" + slug,
 		Sizes:     sizes,
 		EditToken: editToken,
 	}

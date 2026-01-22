@@ -453,9 +453,7 @@
 
                 if (res.ok) {
                     const data = await res.json();
-                    if (data.url) {
-                        window.location.href = data.url;
-                    } else if (data.slug) {
+                    if (data.slug) {
                         const editParam = data.edit_token ? `?edit=${data.edit_token}` : '';
                         window.location.href = isSingleUpload
                             ? `/i/${data.slug}${editParam}`
