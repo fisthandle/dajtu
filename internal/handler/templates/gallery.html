@@ -103,28 +103,37 @@
         }
 
         /* 3. Delete & Edit Buttons */
-        .delete-btn {
+        .item-actions {
             position: absolute;
             top: 8px;
             right: 8px;
+            display: none;
+            gap: 4px;
+            z-index: 10;
+        }
+        .edit-mode .item-actions {
+            display: flex;
+        }
+        .delete-btn, .edit-btn {
             background: rgba(255, 68, 68, 0.9);
             color: #fff;
             border: none;
             width: 32px;
             height: 32px;
             border-radius: 50%;
-            font-size: 24px;
+            font-size: 18px;
             line-height: 1;
             cursor: pointer;
-            z-index: 10;
-            display: none;
             transition: background 0.2s;
         }
         .delete-btn:hover {
             background: #ff4444;
         }
-        .edit-mode .delete-btn {
-            display: block;
+        .edit-btn {
+            background: rgba(74, 158, 255, 0.9);
+        }
+        .edit-btn:hover {
+            background: #4a9eff;
         }
 
         /* 4. Edit Panel */
@@ -467,8 +476,13 @@
         <div class="gallery" id="gallery">
             {{range .Images}}
             <div class="gallery-item" data-slug="{{.Slug}}">
-                <button class="delete-btn" title="Usuń">&times;</button>
-                <a href="{{.URL}}" data-lightbox data-full="{{.URL}}">
+                {{if $.EditMode}}
+                <div class="item-actions">
+                    <button class="edit-btn" onclick="editImage('{{.Slug}}')" title="Edytuj">✎</button>
+                    <button class="delete-btn" onclick="deleteImage('{{.Slug}}')" title="Usuń">&times;</button>
+                </div>
+                {{end}}
+                <a href="{{.URL}}" data-lightbox data-full="{{$.BaseURL}}/i/{{.Slug}}/1920">
                     <img data-src="{{.ThumbURL}}" alt="" loading="lazy">
                 </a>
             </div>
@@ -496,7 +510,22 @@
         <div class="lightbox-counter"></div>
     </div>
 
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+    </div>
+
+    {{if .EditMode}}
+    {{template "partials/editor-modal.html" .}}
+    {{end}}
+
     <script>
+        function showLoading() {
+            document.getElementById('loadingOverlay').classList.add('active');
+        }
+        function hideLoading() {
+            document.getElementById('loadingOverlay').classList.remove('active');
+        }
+
         function copyLink(btn) {
             const input = btn.previousElementSibling;
             input.select();
@@ -506,6 +535,8 @@
         }
 
         const gallerySlug = '{{.Slug}}';
+        const editToken = '{{.EditToken}}';
+        const baseURL = '{{.BaseURL}}';
         const container = document.querySelector('.container');
         const tokenForm = document.getElementById('tokenForm');
         const tokenInput = document.getElementById('tokenInput');
@@ -671,26 +702,41 @@
         });
 
         // Delete image
-        gallery.addEventListener('click', async e => {
-            if (!e.target.classList.contains('delete-btn')) return;
+        async function deleteImage(imageSlug) {
             if (!confirm('Usunąć ten obrazek?')) return;
 
-            const item = e.target.closest('.gallery-item');
-            const imgSlug = item.dataset.slug;
-            const token = tokenInput.value;
+            showLoading();
+            try {
+                const response = await fetch(`${baseURL}/gallery/${gallerySlug}/${imageSlug}`, {
+                    method: 'DELETE',
+                    headers: { 'X-Edit-Token': editToken }
+                });
 
-            const res = await fetch(`/gallery/${gallerySlug}/${imgSlug}`, {
-                method: 'DELETE',
-                headers: { 'X-Edit-Token': token }
-            });
+                if (response.ok) {
+                    document.querySelector(`.gallery-item[data-slug="${imageSlug}"]`).remove();
 
-            if (res.ok) {
-                item.remove();
-            } else {
-                const data = await res.json();
-                alert('Błąd: ' + (data.error || 'Nieznany błąd'));
+                    if (document.querySelectorAll('.gallery-item').length === 0) {
+                        document.getElementById('gallery').innerHTML = `
+                            <div class="empty-gallery">
+                                <h3>Galeria jest pusta</h3>
+                                <p>Dodaj zdjęcia poniżej.</p>
+                            </div>
+                        `;
+                    }
+                } else {
+                    alert('Błąd podczas usuwania');
+                }
+            } catch (e) {
+                alert('Błąd połączenia');
             }
-        });
+            hideLoading();
+        }
+
+        // Edit image
+        function editImage(imageSlug) {
+            const imageUrl = `${baseURL}/i/${imageSlug}/original`;
+            window.editorModal.open(imageUrl);
+        }
 
         // Add images
         addFiles.addEventListener('change', async () => {
