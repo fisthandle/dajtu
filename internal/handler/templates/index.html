@@ -102,11 +102,44 @@
             gap: 15px;
             margin-top: 20px;
         }
-        .preview img {
+        .preview-item {
+            position: relative;
             width: 150px;
             height: 150px;
+        }
+        .preview-item img {
+            width: 100%;
+            height: 100%;
             object-fit: cover;
             border-radius: 8px;
+        }
+        .preview-item .btn-edit,
+        .preview-item .btn-delete {
+            position: absolute;
+            width: 32px;
+            height: 32px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            opacity: 0.8;
+            transition: opacity 0.2s;
+        }
+        .preview-item .btn-edit {
+            top: 5px;
+            left: 5px;
+            background: #2196F3;
+            color: white;
+        }
+        .preview-item .btn-delete {
+            top: 5px;
+            right: 5px;
+            background: #f44336;
+            color: white;
+        }
+        .preview-item .btn-edit:hover,
+        .preview-item .btn-delete:hover {
+            opacity: 1;
         }
         .result {
             margin-top: 30px;
@@ -334,6 +367,7 @@
         let currentAspectRatio = NaN;
         let isRestoring = false;
         let zoomTimer = null;
+        let editedFiles = {};
 
         const aspectButtons = [
             { id: 'aspectFree', ratio: NaN },
@@ -509,16 +543,72 @@
         fileInput.addEventListener('change', updatePreview);
         titleInput.addEventListener('input', updateEditorVisibility);
 
+        function removeFile(index) {
+            const dt = new DataTransfer();
+            const files = fileInput.files;
+
+            for (let i = 0; i < files.length; i++) {
+                if (i !== index) {
+                    dt.items.add(files[i]);
+                }
+            }
+
+            // Usuń edytowane dane dla tego pliku
+            if (editedFiles[index]) {
+                delete editedFiles[index];
+            }
+            // Przeindeksuj editedFiles
+            const newEditedFiles = {};
+            Object.keys(editedFiles).forEach(key => {
+                const oldIndex = parseInt(key);
+                if (oldIndex > index) {
+                    newEditedFiles[oldIndex - 1] = editedFiles[key];
+                } else {
+                    newEditedFiles[key] = editedFiles[key];
+                }
+            });
+            editedFiles = newEditedFiles;
+
+            fileInput.files = dt.files;
+            updatePreview();
+        }
+
         function updatePreview() {
             preview.innerHTML = '';
             const files = fileInput.files;
             submitBtn.disabled = files.length === 0;
 
-            [...files].forEach(file => {
+            Array.from(files).forEach((file, index) => {
+                const item = document.createElement('div');
+                item.className = 'preview-item';
+                item.dataset.index = index;
+
                 const img = document.createElement('img');
                 img.src = URL.createObjectURL(file);
                 img.onload = () => URL.revokeObjectURL(img.src);
-                preview.appendChild(img);
+
+                const editBtn = document.createElement('button');
+                editBtn.className = 'btn-edit';
+                editBtn.innerHTML = '✏️';
+                editBtn.title = 'Edytuj';
+                editBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    openEditorForFile(index);
+                };
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'btn-delete';
+                deleteBtn.innerHTML = '✕';
+                deleteBtn.title = 'Usuń';
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    removeFile(index);
+                };
+
+                item.appendChild(img);
+                item.appendChild(editBtn);
+                item.appendChild(deleteBtn);
+                preview.appendChild(item);
             });
             updateEditorVisibility();
         }
