@@ -153,7 +153,7 @@ func TestGalleryHandler_View_Success(t *testing.T) {
 
 	body := rec.Body.String()
 	if !strings.Contains(body, "Test Gallery") {
-		t.Error("response should contain gallery title")
+		t.Errorf("response should contain gallery title, got body length: %d", len(body))
 	}
 }
 

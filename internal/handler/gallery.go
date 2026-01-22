@@ -78,7 +78,7 @@ func (h *GalleryHandler) Create(w http.ResponseWriter, r *http.Request) {
 	files := r.MultipartForm.File["files"]
 
 	if existingImageSlug == "" && len(files) == 0 {
-		jsonError(w, "no files or existing image provided", http.StatusBadRequest)
+		jsonError(w, "no files provided", http.StatusBadRequest)
 		return
 	}
 
@@ -545,5 +545,7 @@ func (h *GalleryHandler) View(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	h.galleryTmpl.Execute(w, data)
+	if err := h.galleryTmpl.Execute(w, data); err != nil {
+		log.Printf("template error: %v", err)
+	}
 }
