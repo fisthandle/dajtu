@@ -379,6 +379,15 @@
 
     <script src="https://unpkg.com/cropperjs@1.6.2/dist/cropper.min.js"></script>
     <script>
+        const flash = sessionStorage.getItem('flash');
+        if (flash) {
+            sessionStorage.removeItem('flash');
+            const div = document.createElement('div');
+            div.className = 'flash';
+            div.textContent = flash;
+            document.body.prepend(div);
+        }
+
         const form = document.getElementById('uploadForm');
         const dropArea = document.getElementById('dropArea');
         const fileInput = document.getElementById('fileInput');
@@ -903,11 +912,13 @@
 
                 if (res.ok) {
                     const data = await res.json();
-                    // Przekieruj do strony obrazka lub galerii
                     if (data.url) {
                         window.location.href = data.url;
                     } else if (data.slug) {
-                        window.location.href = isSingleUpload ? `/i/${data.slug}` : `/g/${data.slug}`;
+                        const editParam = data.edit_token ? `?edit=${data.edit_token}` : '';
+                        window.location.href = isSingleUpload
+                            ? `/i/${data.slug}${editParam}`
+                            : `/g/${data.slug}${editParam}`;
                     }
                 } else {
                     alert('Błąd uploadu');

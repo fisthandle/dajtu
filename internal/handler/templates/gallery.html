@@ -13,211 +13,86 @@
             min-height: 100vh;
         }
         .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
-        h1 { margin-bottom: 20px; font-weight: 400; }
-        .gallery {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 10px;
-        }
-        .gallery-item {
-            position: relative;
-            aspect-ratio: 1;
-            overflow: hidden;
-            border-radius: 4px;
-        }
-        .gallery-item a {
-            display: block;
-            width: 100%;
-            height: 100%;
-        }
-        .gallery-item img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            transition: transform 0.2s;
-            background: #222;
-        }
-        .gallery-item img[data-src] { opacity: 0.3; }
-        .gallery-item:hover img { transform: scale(1.05); }
-        .delete-btn {
-            display: none;
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            width: 28px;
-            height: 28px;
-            border: none;
-            border-radius: 50%;
-            background: rgba(255,60,60,0.9);
-            color: #fff;
-            font-size: 18px;
-            line-height: 1;
-            cursor: pointer;
-            z-index: 10;
-        }
-        .edit-mode .delete-btn { display: block; }
-        .delete-btn:hover { background: #ff2020; }
-        .lightbox {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.95);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-        }
-        .lightbox.active { display: flex; }
-        .lightbox-img {
-            max-width: 95vw;
-            max-height: 95vh;
-            user-select: none;
-        }
-        .lightbox-close {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            width: 40px;
-            height: 40px;
-            border: none;
-            background: transparent;
-            font-size: 40px;
-            color: #fff;
-            cursor: pointer;
-            line-height: 1;
-        }
-        .lightbox-close:hover { color: #ff4444; }
-        .lightbox-nav {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 60px;
-            height: 60px;
-            border: none;
-            background: rgba(255,255,255,0.1);
-            color: #fff;
-            font-size: 40px;
-            cursor: pointer;
-            border-radius: 50%;
-            transition: background 0.2s;
-        }
-        .lightbox-nav:hover { background: rgba(255,255,255,0.2); }
-        .lightbox-prev { left: 20px; }
-        .lightbox-next { right: 20px; }
-        .lightbox-counter {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            padding: 8px 16px;
-            background: rgba(0,0,0,0.7);
-            border-radius: 20px;
-            font-size: 14px;
-            color: #fff;
-        }
-        .edit-panel {
-            margin-bottom: 30px;
-            padding: 20px;
+        .header { text-align: center; margin-bottom: 20px; }
+        .header .logo { font-size: 2rem; font-weight: 300; }
+        .header .logo a { color: #fff; text-decoration: none; }
+        .gallery-title { font-size: 1.5rem; font-weight: 400; margin-bottom: 20px; }
+        .links-table {
+            max-width: 800px;
+            margin: 0 auto 30px;
             background: #1a1a1a;
-            border-radius: 8px;
+            border-radius: 12px;
+            padding: 20px;
         }
-        .edit-panel summary {
-            cursor: pointer;
-            color: #888;
-            font-size: 0.9rem;
-        }
-        .edit-panel[open] summary { margin-bottom: 15px; }
-        .token-form {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-        .token-form input {
-            flex: 1;
-            padding: 10px 12px;
-            border: 1px solid #333;
-            border-radius: 6px;
-            background: #222;
-            color: #fff;
-            font-size: 0.9rem;
-        }
-        .token-form input:focus { outline: none; border-color: #4a9eff; }
-        .token-form button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 6px;
-            background: #333;
-            color: #fff;
-            cursor: pointer;
-        }
-        .token-form button:hover { background: #444; }
-        .add-form {
-            display: none;
-            margin-top: 15px;
-            padding-top: 15px;
-            border-top: 1px solid #333;
-        }
-        .edit-mode .add-form { display: block; }
-        .add-form input[type="file"] { display: none; }
-        .add-form label {
-            display: inline-block;
-            padding: 10px 20px;
-            background: #4a9eff;
-            border-radius: 6px;
-            cursor: pointer;
-        }
-        .add-form label:hover { background: #3a8eef; }
-        .edit-status {
-            display: none;
-            color: #4a9eff;
-            font-size: 0.85rem;
-            margin-top: 10px;
-        }
-        .edit-mode .edit-status { display: block; }
-        .title-form {
-            display: none;
-            margin-top: 15px;
-            padding-top: 15px;
-            border-top: 1px solid #333;
-            gap: 10px;
-        }
-        .edit-mode .title-form { display: flex; }
-        .title-form input {
-            flex: 1;
-            padding: 10px 12px;
-            border: 1px solid #333;
-            border-radius: 6px;
-            background: #222;
-            color: #fff;
+        .links-table h2 {
             font-size: 1rem;
+            margin-bottom: 15px;
+            color: #888;
         }
-        .title-form input:focus { outline: none; border-color: #4a9eff; }
-        .title-form button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 6px;
-            background: #4a9eff;
+        .link-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #333;
+        }
+        .link-row:last-child {
+            border-bottom: none;
+        }
+        .link-row label {
+            color: #888;
+            min-width: 100px;
+        }
+        .link-row input {
+            flex: 1;
+            background: #222;
+            border: 1px solid #333;
             color: #fff;
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin: 0 10px;
+            font-family: monospace;
+        }
+        .link-row button {
+            background: #333;
+            border: none;
+            color: #fff;
+            padding: 8px 15px;
+            border-radius: 6px;
             cursor: pointer;
         }
-        .title-form button:hover { background: #3a8eef; }
-        .pagination {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 1rem;
-            padding: 1rem;
-            margin-top: 1rem;
+        .link-row button:hover {
+            background: #444;
         }
-        .pagination a {
-            color: #4a9eff;
-            text-decoration: none;
-        }
-        .pagination a:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
     <div class="container">
-        {{if .Title}}<h1>{{.Title}}</h1>{{end}}
+        <div class="header">
+            <h1 class="logo"><a href="/">dajtu</a></h1>
+        </div>
+        {{if .Title}}<h2 class="gallery-title">{{.Title}}</h2>{{end}}
+
+        <div class="links-table">
+            <h2>Linki do galerii</h2>
+            <div class="link-row">
+                <label>Link do galerii:</label>
+                <input type="text" readonly value="{{.BaseURL}}/g/{{.Slug}}" onclick="this.select()">
+                <button onclick="copyLink(this)">Kopiuj</button>
+            </div>
+            {{if .EditMode}}
+            <div class="link-row">
+                <label>Edit Token:</label>
+                <input type="text" readonly value="{{.EditToken}}" onclick="this.select()">
+                <button onclick="copyLink(this)">Kopiuj</button>
+            </div>
+            <div class="link-row">
+                <label>Link z edycją:</label>
+                <input type="text" readonly value="{{.BaseURL}}/g/{{.Slug}}?edit={{={{.EditToken}}}}" onclick="this.select()">
+                <button onclick="copyLink(this)">Kopiuj</button>
+            </div>
+            {{end}}
+        </div>
 
         <details class="edit-panel" id="editPanel" {{if .EditMode}}open{{end}}>
             <summary>Edycja galerii</summary>
@@ -271,6 +146,14 @@
     </div>
 
     <script>
+        function copyLink(btn) {
+            const input = btn.previousElementSibling;
+            input.select();
+            navigator.clipboard.writeText(input.value);
+            btn.textContent = 'Skopiowano!';
+            setTimeout(() => btn.textContent = 'Kopiuj', 2000);
+        }
+
         const gallerySlug = '{{.Slug}}';
         const container = document.querySelector('.container');
         const tokenForm = document.getElementById('tokenForm');

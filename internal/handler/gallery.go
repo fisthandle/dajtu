@@ -320,7 +320,8 @@ func (h *GalleryHandler) AddImages(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]any{
-		"added": uploadedImages,
+		"added":      uploadedImages,
+		"edit_token": gallery.EditToken,
 	})
 }
 
@@ -495,4 +496,3 @@ func (h *GalleryHandler) View(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	h.galleryTmpl.Execute(w, data)
 }
-

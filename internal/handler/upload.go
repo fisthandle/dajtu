@@ -27,9 +27,10 @@ func NewUploadHandler(cfg *config.Config, db *storage.DB, fs *storage.Filesystem
 }
 
 type UploadResponse struct {
-	Slug  string            `json:"slug"`
-	URL   string            `json:"url"`
-	Sizes map[string]string `json:"sizes"`
+	Slug      string            `json:"slug"`
+	URL       string            `json:"url,omitempty"`
+	Sizes     map[string]string `json:"sizes,omitempty"`
+	EditToken string            `json:"edit_token,omitempty"`
 }
 
 var extToMime = map[string]string{
@@ -157,6 +158,15 @@ func (h *UploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Store metadata
 	now := time.Now().Unix()
 	originalResult := results[0]
+
+	editToken, err := generateEditToken()
+	if err != nil {
+		log.Printf("generate token error: %v", err)
+		h.fs.Delete(slug)
+		jsonError(w, "token generation error", http.StatusInternalServerError)
+		return
+	}
+
 	img := &storage.Image{
 		Slug:         slug,
 		OriginalName: header.Filename,
@@ -166,6 +176,7 @@ func (h *UploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Height:       originalResult.Height,
 		CreatedAt:    now,
 		AccessedAt:   now,
+		EditToken:    editToken,
 	}
 
 	if _, err := h.db.InsertImage(img); err != nil {
@@ -184,9 +195,10 @@ func (h *UploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp := UploadResponse{
-		Slug:  slug,
-		URL:   sizes["original"],
-		Sizes: sizes,
+		Slug:      slug,
+		URL:       sizes["original"],
+		Sizes:     sizes,
+		EditToken: editToken,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -233,10 +245,15 @@ func (h *ImageViewHandler) ServeHTTP(w http.ResponseWriter, r *http.Request, slu
 		canEdit = true
 	}
 
+	editToken := r.URL.Query().Get("edit")
+	editMode := editToken != "" && img.EditToken != "" && editToken == img.EditToken
+
 	data := map[string]interface{}{
-		"Image":   img,
-		"BaseURL": h.baseURL,
-		"CanEdit": canEdit,
+		"Image":     img,
+		"BaseURL":   h.baseURL,
+		"CanEdit":   canEdit,
+		"EditToken": editToken,
+		"EditMode":  editMode,
 	}
 
 	h.tmpl.ExecuteTemplate(w, "image.html", data)
@@ -453,4 +470,39 @@ func (h *ImageEditHandler) RestoreOriginal(w http.ResponseWriter, r *http.Reques
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+}
+
+func (h *UploadHandler) DeleteImage(w http.ResponseWriter, r *http.Request, slug string) {
+	if r.Method != http.MethodDelete {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	editToken := r.Header.Get("X-Edit-Token")
+	if editToken == "" {
+		editToken = r.FormValue("edit_token")
+	}
+
+	img, err := h.db.GetImageBySlug(slug)
+	if err != nil || img == nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	if img.EditToken == "" || img.EditToken != editToken {
+		jsonError(w, "invalid edit token", http.StatusForbidden)
+		return
+	}
+
+	if err := h.fs.Delete(slug); err != nil {
+		log.Printf("delete files error: %v", err)
+	}
+
+	if err := h.db.DeleteImageBySlug(slug); err != nil {
+		jsonError(w, "database error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"deleted": slug})
 }

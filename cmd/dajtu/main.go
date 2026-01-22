@@ -139,6 +139,11 @@ func main() {
 			return
 		}
 
+		if r.Method == http.MethodDelete && len(parts) == 1 {
+			uploadHandler.DeleteImage(w, r, slug)
+			return
+		}
+
 		// /i/{slug}/edit - edit image (GET/POST)
 		if len(parts) == 2 && parts[1] == "edit" {
 			imageEditHandler.ServeHTTP(w, r, slug)

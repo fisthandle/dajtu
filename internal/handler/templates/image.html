@@ -100,6 +100,26 @@
         .edit-btn:hover {
             background: #1976D2;
         }
+        .delete-section {
+            margin-top: 15px;
+            text-align: center;
+        }
+        .delete-btn {
+            background: #f44336;
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+        }
+        .delete-btn:hover {
+            background: #d32f2f;
+        }
+        .error {
+            color: #f44336;
+            text-align: center;
+            margin: 0;
+        }
     </style>
 </head>
 <body>
@@ -141,6 +161,29 @@
         </div>
     </div>
 
+    {{if .EditMode}}
+    <div class="links-table">
+        <h2>Edycja</h2>
+        <div class="link-row">
+            <label>Edit Token:</label>
+            <input type="text" readonly value="{{.EditToken}}" onclick="this.select()">
+            <button onclick="copyLink(this)">Kopiuj</button>
+        </div>
+        <div class="link-row">
+            <label>Link z edycją:</label>
+            <input type="text" readonly value="{{.BaseURL}}/i/{{.Image.Slug}}?edit={{.EditToken}}" onclick="this.select()">
+            <button onclick="copyLink(this)">Kopiuj</button>
+        </div>
+        <div class="delete-section">
+            <button class="delete-btn" onclick="deleteImage()">Usuń obrazek</button>
+        </div>
+    </div>
+    {{else if .EditToken}}
+    <div class="links-table">
+        <p class="error">Nieprawidłowy edit token</p>
+    </div>
+    {{end}}
+
     <div class="back-link">
         <a href="/">← Wróć dodać kolejny</a>
         {{if .CanEdit}}
@@ -159,6 +202,23 @@
         navigator.clipboard.writeText(input.value);
         btn.textContent = 'Skopiowano!';
         setTimeout(() => btn.textContent = 'Kopiuj', 2000);
+    }
+
+    function deleteImage() {
+        if (!confirm('Na pewno usunąć ten obrazek?')) return;
+
+        const token = new URLSearchParams(location.search).get('edit');
+        fetch('/i/{{.Image.Slug}}', {
+            method: 'DELETE',
+            headers: { 'X-Edit-Token': token }
+        }).then(res => {
+            if (res.ok) {
+                sessionStorage.setItem('flash', 'Obrazek usunięty');
+                location.href = '/';
+            } else {
+                alert('Błąd usuwania');
+            }
+        });
     }
     </script>
 </body>
