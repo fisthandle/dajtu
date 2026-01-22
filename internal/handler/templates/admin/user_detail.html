@@ -1,6 +1,6 @@
 {{define "title"}}{{.User.DisplayName}} - Admin dajtu{{end}}
 {{define "content"}}
-    <h1>{{.User.DisplayName}} <a href="/u/{{.User.Slug}}" class="public-link">-> profil publiczny</a></h1>
+    <h1>{{.User.DisplayName}} <a href="/u/{{.User.Slug}}" class="public-link">→ profil publiczny</a></h1>
 
     <div class="summary">
         <h2>Podsumowanie</h2>
@@ -11,15 +11,15 @@
             </div>
             <div class="summary-stat">
                 <div class="value">{{.User.ImageCount}}</div>
-                <div class="label">zdj&eogon;&cacute;</div>
+                <div class="label">zdjęć</div>
             </div>
             <div class="summary-stat">
                 <div class="value">{{printf "%.2f" (divf .User.TotalSize 1048576)}} MB</div>
-                <div class="label">zaj&eogon;te miejsce</div>
+                <div class="label">zajęte miejsce</div>
             </div>
             <div class="summary-stat">
                 <div class="value">{{.User.TotalViews}}</div>
-                <div class="label">&lstrok;&aogon;cznie pobra&nacute;</div>
+                <div class="label">łącznie pobrań</div>
             </div>
             <div class="summary-stat">
                 <div class="value">{{formatDate .User.CreatedAt}}</div>
@@ -30,19 +30,19 @@
 
     <h3>Galerie ({{len .Galleries}})</h3>
     <table>
-        <tr><th>ID</th><th>Tytu&lstrok;</th><th>Zdj&eogon;&cacute;</th><th>Utworzona</th><th>Akcje</th></tr>
+        <tr><th>ID</th><th>Tytuł</th><th>Zdjęć</th><th>Utworzona</th><th>Akcje</th></tr>
         {{range .Galleries}}
         <tr>
             <td>{{.ID}}</td>
             <td>
-                <a href="/g/{{.Slug}}" target="_blank">{{if .Title}}{{.Title}}{{else}}(bez tytu&lstrok;u){{end}}</a>
+                <a href="/g/{{.Slug}}" target="_blank">{{if .Title}}{{.Title}}{{else}}(bez tytułu){{end}}</a>
                 <a href="/admin/galleries/{{.Slug}}" class="adm">[ADM]</a>
             </td>
             <td>{{.ImageCount}}</td>
             <td>{{formatDate .CreatedAt}}</td>
             <td>
-                <form method="POST" action="/admin/galleries/{{.ID}}/delete" style="display:inline" onsubmit="return confirm('Usun&aogon;&cacute; galeri&eogon; ze wszystkimi zdj&eogon;ciami?')">
-                    <button class="btn-delete">Usu&nacute;</button>
+                <form method="POST" action="/admin/galleries/{{.ID}}/delete" style="display:inline" onsubmit="return confirm('Usunąć galerię ze wszystkimi zdjęciami?')">
+                    <button class="btn-delete">Usuń</button>
                 </form>
             </td>
         </tr>
@@ -51,9 +51,9 @@
         {{end}}
     </table>
 
-    <h3>Zdj&eogon;cia ({{len .Images}})</h3>
+    <h3>Zdjęcia ({{len .Images}})</h3>
     <table>
-        <tr><th>Podgl&aogon;d</th><th>Nazwa</th><th>Galeria</th><th>Rozmiar</th><th>Pobra&nacute;</th><th>Akcje</th></tr>
+        <tr><th>Podgląd</th><th>Nazwa</th><th>Galeria</th><th>Rozmiar</th><th>Pobrań</th><th>Akcje</th></tr>
         {{range .Images}}
         <tr>
             <td><a href="/i/{{.Slug}}" target="_blank"><img src="/i/{{.Slug}}/thumb.webp" class="thumb"></a></td>
@@ -62,13 +62,13 @@
             <td>{{printf "%.1f" (divf .FileSize 1024)}} KB</td>
             <td>{{.Downloads}}</td>
             <td>
-                <form method="POST" action="/admin/images/{{.ID}}/delete" style="display:inline" onsubmit="return confirm('Usun&aogon;&cacute; zdj&eogon;cie?')">
-                    <button class="btn-delete">Usu&nacute;</button>
+                <form method="POST" action="/admin/images/{{.ID}}/delete" style="display:inline" onsubmit="return confirm('Usunąć zdjęcie?')">
+                    <button class="btn-delete">Usuń</button>
                 </form>
             </td>
         </tr>
         {{else}}
-        <tr><td colspan="6" style="color:#666;">Brak zdj&eogon;&cacute;</td></tr>
+        <tr><td colspan="6" style="color:#666;">Brak zdjęć</td></tr>
         {{end}}
     </table>
 {{end}}

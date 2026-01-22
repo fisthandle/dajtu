@@ -143,8 +143,8 @@
     const editorModal = document.getElementById('editorModal');
     const editorImage = document.getElementById('editorImage');
     const editorInfo = document.getElementById('editorInfo');
-    const editorUndo = document.getElementById('editorUndo');
-    const editorRedo = document.getElementById('editorRedo');
+    const undoBtn = document.getElementById('editorUndo');
+    const redoBtn = document.getElementById('editorRedo');
 
     let cropper = null;
     let historyStack = [];
@@ -187,8 +187,8 @@
     }
 
     function updateUndoRedo() {
-        editorUndo.disabled = historyIndex <= 0;
-        editorRedo.disabled = historyIndex < 0 || historyIndex >= historyStack.length - 1;
+        undoBtn.disabled = historyIndex <= 0;
+        redoBtn.disabled = historyIndex < 0 || historyIndex >= historyStack.length - 1;
     }
 
     function updateEditorUI() {
@@ -350,8 +350,8 @@
     document.getElementById('editorFlipH')?.addEventListener('click', () => editorFlip('h'));
     document.getElementById('editorFlipV')?.addEventListener('click', () => editorFlip('v'));
     document.getElementById('editorReset')?.addEventListener('click', editorReset);
-    editorUndo?.addEventListener('click', editorUndo);
-    editorRedo?.addEventListener('click', editorRedo);
+    undoBtn?.addEventListener('click', editorUndo);
+    redoBtn?.addEventListener('click', editorRedo);
     document.getElementById('cancelEdit')?.addEventListener('click', closeEditor);
     // Note: applyEdit handler should be set by parent template
 

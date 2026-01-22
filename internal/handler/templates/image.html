@@ -72,50 +72,54 @@
         }
 
         /* Links */
-        .link-row {
+        .links-compact {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 0;
-            border-bottom: 1px solid #2a2a3e;
-        }
-        .link-row:last-child {
-            border-bottom: none;
-        }
-        .link-row label {
-            color: #888;
-            min-width: 120px;
-            font-size: 0.9rem;
-        }
-        .link-row input {
-            flex: 1;
-            background: #0a0a0f;
-            border: 1px solid #2a2a3e;
-            color: #e0e0e0;
-            padding: 10px 12px;
-            border-radius: 6px;
-            margin: 0 10px;
+            flex-direction: column;
+            gap: 8px;
             font-family: monospace;
             font-size: 0.85rem;
         }
-        .link-row input:focus {
-            outline: none;
-            border-color: #4a9eff;
+        .link-item {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 0;
+            border-bottom: 1px solid #2a2a3e;
         }
-        .link-row button {
+        .link-item:last-child {
+            border-bottom: none;
+        }
+        .link-label {
+            color: #888;
+            min-width: 110px;
+        }
+        .link-url {
+            color: #9ec9ff;
+            flex: 1 1 260px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .link-actions {
+            display: flex;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+        .link-actions button {
             background: #2a2a3e;
             border: none;
             color: #e0e0e0;
-            padding: 10px 18px;
+            padding: 6px 10px;
             border-radius: 6px;
             cursor: pointer;
             transition: background 0.2s;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
         }
-        .link-row button:hover {
+        .link-actions button:hover {
             background: #3a3a4e;
         }
-        .link-row button.copied {
+        .link-actions button.copied {
             background: #4a9eff;
             color: #fff;
         }
@@ -235,35 +239,53 @@
         <!-- Links -->
         <div class="card">
             <h2>Linki do obrazka</h2>
-            <div class="link-row">
-                <label>Bezpośredni:</label>
-                <input type="text" id="link-original" readonly value="{{.BaseURL}}/i/{{.Image.Slug}}/original" onclick="this.select()">
-                <button onclick="copyLink('link-original', this)">Kopiuj</button>
-            </div>
-            <div class="link-row">
-                <label>1920px:</label>
-                <input type="text" id="link-1920" readonly value="{{.BaseURL}}/i/{{.Image.Slug}}/1920" onclick="this.select()">
-                <button onclick="copyLink('link-1920', this)">Kopiuj</button>
-            </div>
-            <div class="link-row">
-                <label>800px:</label>
-                <input type="text" id="link-800" readonly value="{{.BaseURL}}/i/{{.Image.Slug}}/800" onclick="this.select()">
-                <button onclick="copyLink('link-800', this)">Kopiuj</button>
-            </div>
-            <div class="link-row">
-                <label>Miniatura:</label>
-                <input type="text" id="link-thumb" readonly value="{{.BaseURL}}/i/{{.Image.Slug}}/thumb" onclick="this.select()">
-                <button onclick="copyLink('link-thumb', this)">Kopiuj</button>
-            </div>
-            <div class="link-row">
-                <label>BBCode:</label>
-                <input type="text" id="link-bbcode" readonly value="[img]{{.BaseURL}}/i/{{.Image.Slug}}/original[/img]" onclick="this.select()">
-                <button onclick="copyLink('link-bbcode', this)">Kopiuj</button>
-            </div>
-            <div class="link-row">
-                <label>HTML:</label>
-                <input type="text" id="link-html" readonly value='<img src="{{.BaseURL}}/i/{{.Image.Slug}}/original">' onclick="this.select()">
-                <button onclick="copyLink('link-html', this)">Kopiuj</button>
+            <div class="links-compact">
+                <div class="link-item">
+                    <span class="link-label">Bezpośredni:</span>
+                    <code class="link-url" data-url="{{.BaseURL}}/i/{{.Image.Slug}}/original">{{.BaseURL}}/i/{{.Image.Slug}}/original</code>
+                    <div class="link-actions">
+                        <button type="button" onclick="copyUrl(this)">Kopiuj</button>
+                        <button type="button" onclick="openUrl(this)">Otwórz</button>
+                    </div>
+                </div>
+                <div class="link-item">
+                    <span class="link-label">1920px:</span>
+                    <code class="link-url" data-url="{{.BaseURL}}/i/{{.Image.Slug}}/1920">{{.BaseURL}}/i/{{.Image.Slug}}/1920</code>
+                    <div class="link-actions">
+                        <button type="button" onclick="copyUrl(this)">Kopiuj</button>
+                        <button type="button" onclick="openUrl(this)">Otwórz</button>
+                    </div>
+                </div>
+                <div class="link-item">
+                    <span class="link-label">800px:</span>
+                    <code class="link-url" data-url="{{.BaseURL}}/i/{{.Image.Slug}}/800">{{.BaseURL}}/i/{{.Image.Slug}}/800</code>
+                    <div class="link-actions">
+                        <button type="button" onclick="copyUrl(this)">Kopiuj</button>
+                        <button type="button" onclick="openUrl(this)">Otwórz</button>
+                    </div>
+                </div>
+                <div class="link-item">
+                    <span class="link-label">Miniatura:</span>
+                    <code class="link-url" data-url="{{.BaseURL}}/i/{{.Image.Slug}}/thumb">{{.BaseURL}}/i/{{.Image.Slug}}/thumb</code>
+                    <div class="link-actions">
+                        <button type="button" onclick="copyUrl(this)">Kopiuj</button>
+                        <button type="button" onclick="openUrl(this)">Otwórz</button>
+                    </div>
+                </div>
+                <div class="link-item">
+                    <span class="link-label">BBCode:</span>
+                    <code class="link-url" data-url="[img]{{.BaseURL}}/i/{{.Image.Slug}}/original[/img]">[img]{{.BaseURL}}/i/{{.Image.Slug}}/original[/img]</code>
+                    <div class="link-actions">
+                        <button type="button" onclick="copyUrl(this)">Kopiuj</button>
+                    </div>
+                </div>
+                <div class="link-item">
+                    <span class="link-label">HTML:</span>
+                    <code class="link-url" data-url='<img src="{{.BaseURL}}/i/{{.Image.Slug}}/original">'>&lt;img src="{{.BaseURL}}/i/{{.Image.Slug}}/original"&gt;</code>
+                    <div class="link-actions">
+                        <button type="button" onclick="copyUrl(this)">Kopiuj</button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -271,15 +293,22 @@
         <!-- Edit Token -->
         <div class="card">
             <h2>Edycja</h2>
-            <div class="link-row">
-                <label>Edit Token:</label>
-                <input type="text" id="link-token" readonly value="{{.EditToken}}" onclick="this.select()">
-                <button onclick="copyLink('link-token', this)">Kopiuj</button>
-            </div>
-            <div class="link-row">
-                <label>Link z edycją:</label>
-                <input type="text" id="link-edit" readonly value="{{.BaseURL}}/i/{{.Image.Slug}}?edit={{.EditToken}}" onclick="this.select()">
-                <button onclick="copyLink('link-edit', this)">Kopiuj</button>
+            <div class="links-compact">
+                <div class="link-item">
+                    <span class="link-label">Edit Token:</span>
+                    <code class="link-url" data-url="{{.EditToken}}">{{.EditToken}}</code>
+                    <div class="link-actions">
+                        <button type="button" onclick="copyUrl(this)">Kopiuj</button>
+                    </div>
+                </div>
+                <div class="link-item">
+                    <span class="link-label">Link z edycją:</span>
+                    <code class="link-url" data-url="{{.BaseURL}}/i/{{.Image.Slug}}?edit={{.EditToken}}">{{.BaseURL}}/i/{{.Image.Slug}}?edit={{.EditToken}}</code>
+                    <div class="link-actions">
+                        <button type="button" onclick="copyUrl(this)">Kopiuj</button>
+                        <button type="button" onclick="openUrl(this)">Otwórz</button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -323,17 +352,29 @@
     const imageSlug = '{{.Image.Slug}}';
     const editToken = '{{.EditToken}}';
 
-    function copyLink(inputId, btn) {
-        const input = document.getElementById(inputId);
-        input.select();
-        navigator.clipboard.writeText(input.value).then(() => {
-            btn.textContent = '✓ Skopiowano';
+    function getLinkUrl(btn) {
+        const item = btn.closest('.link-item');
+        const urlEl = item ? item.querySelector('.link-url') : null;
+        return urlEl ? urlEl.dataset.url || urlEl.textContent : '';
+    }
+
+    function copyUrl(btn) {
+        const url = getLinkUrl(btn);
+        if (!url) return;
+        navigator.clipboard.writeText(url).then(() => {
+            btn.textContent = 'Skopiowano';
             btn.classList.add('copied');
             setTimeout(() => {
                 btn.textContent = 'Kopiuj';
                 btn.classList.remove('copied');
             }, 2000);
         });
+    }
+
+    function openUrl(btn) {
+        const url = getLinkUrl(btn);
+        if (!url) return;
+        window.open(url, '_blank');
     }
 
     function editImage() {
@@ -404,8 +445,10 @@
         const formData = new FormData();
         formData.append('existing_image', imageSlug);
 
+        formData.append('edit_token', editToken);
+
         for (let file of files) {
-            formData.append('images', file);
+            formData.append('files', file);
         }
 
         document.getElementById('loadingOverlay').classList.add('active');
@@ -413,6 +456,7 @@
         try {
             const res = await fetch('/gallery', {
                 method: 'POST',
+                headers: { 'X-Edit-Token': editToken },
                 body: formData
             });
 
@@ -446,10 +490,12 @@
         canvas.toBlob(async (blob) => {
             const formData = new FormData();
             formData.append('file', blob, 'edited.jpg');
+            formData.append('edit_token', editToken);
 
             try {
                 const res = await fetch(`/i/${imageSlug}/edit`, {
                     method: 'POST',
+                    headers: { 'X-Edit-Token': editToken },
                     body: formData
                 });
 

@@ -25,50 +25,63 @@
         .gallery-header .logo a { color: #fff; text-decoration: none; }
         .gallery-title { font-size: 1.5rem; font-weight: 400; margin-bottom: 20px; text-align: center; }
 
-        /* Links Table */
-        .links-table {
+        /* Links */
+        .links-compact {
             max-width: 800px;
             margin: 0 auto 30px;
             background: #1a1a2e;
             border-radius: 12px;
             padding: 20px;
             border: 1px solid #333;
-        }
-        .links-table h2 {
-            font-size: 1rem;
-            margin-bottom: 15px;
-            color: #888;
-        }
-        .link-row {
             display: flex;
-            justify-content: space-between;
+            flex-direction: column;
+            gap: 8px;
+            font-family: monospace;
+            font-size: 0.85rem;
+        }
+        .links-compact h2 {
+            font-size: 1rem;
+            margin-bottom: 10px;
+            color: #888;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        .link-item {
+            display: flex;
+            flex-wrap: wrap;
             align-items: center;
-            padding: 10px 0;
+            gap: 8px;
+            padding: 6px 0;
             border-bottom: 1px solid #333;
         }
-        .link-row:last-child { border-bottom: none; }
-        .link-row label { color: #888; min-width: 100px; }
-        .link-row input {
-            flex: 1;
-            background: #0a0a0f;
-            border: 1px solid #333;
-            color: #fff;
-            padding: 8px 12px;
-            border-radius: 6px;
-            margin: 0 10px;
-            font-family: monospace;
-            font-size: 0.9rem;
+        .link-item:last-child { border-bottom: none; }
+        .link-label { color: #888; min-width: 120px; }
+        .link-url {
+            color: #9ec9ff;
+            flex: 1 1 260px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
-        .link-row button {
+        .link-actions {
+            display: flex;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+        .link-actions button {
             background: #333;
             border: none;
             color: #fff;
-            padding: 8px 15px;
+            padding: 6px 10px;
             border-radius: 6px;
             cursor: pointer;
             transition: background 0.2s;
+            font-size: 0.8rem;
         }
-        .link-row button:hover { background: #444; }
+        .link-actions button:hover { background: #444; }
+        .link-actions button.copied {
+            background: #4a9eff;
+            color: #fff;
+        }
 
         /* 2. Gallery Grid */
         .gallery {
@@ -190,29 +203,26 @@
         .token-form button:hover, .title-form button:hover, .title-editor button:hover {
             background: #3a8eef;
         }
-        .add-form {
-            margin-top: 15px;
+        .token-status {
+            margin-top: 8px;
+            font-size: 0.9rem;
+            color: #888;
         }
-        .add-form label {
-            display: inline-block;
-            background: #333;
-            color: #fff;
-            padding: 10px 20px;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: background 0.2s;
+        .token-status.error {
+            color: #ff7777;
         }
-        .add-form label:hover {
-            background: #444;
-        }
-        .add-form input[type="file"] {
-            display: none;
+        .token-status.success {
+            color: #7ad97a;
         }
         .add-image-section {
             background: #1a1a2e;
             border-radius: 12px;
             padding: 20px;
             margin-bottom: 20px;
+            display: none;
+        }
+        .edit-mode .add-image-section {
+            display: block;
         }
         .add-image-dropzone {
             border: 2px dashed #444;
@@ -415,19 +425,18 @@
             .gallery-title {
                 font-size: 1.2rem;
             }
-            .links-table {
+            .links-compact {
                 padding: 15px;
             }
-            .link-row {
-                flex-direction: column;
-                align-items: stretch;
-                gap: 8px;
+            .link-item {
+                align-items: flex-start;
             }
-            .link-row label {
+            .link-label {
                 min-width: auto;
+                width: 100%;
             }
-            .link-row input {
-                margin: 0;
+            .link-url {
+                width: 100%;
             }
             .lightbox-nav {
                 width: 48px;
@@ -454,47 +463,20 @@
         </div>
         {{if .Title}}<h2 class="gallery-title">{{.Title}}</h2>{{end}}
 
-        <div class="links-table">
-            <h2>Linki do galerii</h2>
-            <div class="link-row">
-                <label>Link do galerii:</label>
-                <input type="text" readonly value="{{.BaseURL}}/g/{{.Slug}}" onclick="this.select()">
-                <button onclick="copyLink(this)">Kopiuj</button>
-            </div>
-            {{if .EditMode}}
-            <div class="link-row">
-                <label>Edit Token:</label>
-                <input type="text" readonly value="{{.EditToken}}" onclick="this.select()">
-                <button onclick="copyLink(this)">Kopiuj</button>
-            </div>
-            <div class="link-row">
-                <label>Link z edycją:</label>
-                <input type="text" readonly value="{{.BaseURL}}/g/{{.Slug}}?edit={{.EditToken}}" onclick="this.select()">
-                <button onclick="copyLink(this)">Kopiuj</button>
-            </div>
-            {{end}}
-        </div>
-
         <details class="edit-panel" id="editPanel" {{if .EditMode}}open{{end}}>
             <summary>Edycja galerii</summary>
             <form class="token-form" id="tokenForm">
                 <input type="text" id="tokenInput" placeholder="Wklej edit token..." value="{{.EditToken}}">
                 <button type="submit">Odblokuj</button>
+                <div class="token-status" id="tokenStatus" role="status" aria-live="polite"></div>
             </form>
             <form class="title-form" id="titleForm">
                 <input type="text" id="titleInput" placeholder="Tytuł galerii..." value="{{.Title}}">
                 <button type="submit">Zapisz tytuł</button>
             </form>
-            <div class="add-form">
-                <label>
-                    + Dodaj obrazki
-                    <input type="file" id="addFiles" multiple accept="image/*">
-                </label>
-            </div>
             <p class="edit-status">Tryb edycji aktywny - kliknij X na obrazku żeby usunąć</p>
         </details>
 
-        {{if .EditMode}}
         <div class="add-image-section">
             <h3>Dodaj zdjęcia</h3>
             <div class="add-image-dropzone" id="addDropzone">
@@ -509,17 +491,14 @@
                 <p id="progressText">Wysyłanie...</p>
             </div>
         </div>
-        {{end}}
 
         <div class="gallery" id="gallery">
             {{range .Images}}
             <div class="gallery-item" data-slug="{{.Slug}}">
-                {{if $.EditMode}}
                 <div class="item-actions">
                     <button class="edit-btn" onclick="editImage('{{.Slug}}')" title="Edytuj">✎</button>
                     <button class="delete-btn" onclick="deleteImage('{{.Slug}}')" title="Usuń">&times;</button>
                 </div>
-                {{end}}
                 <a href="{{.URL}}" data-lightbox data-full="{{$.BaseURL}}/i/{{.Slug}}/1920">
                     <img data-src="{{.ThumbURL}}" alt="" loading="lazy">
                 </a>
@@ -538,6 +517,35 @@
             {{end}}
         </div>
         {{end}}
+
+        <div class="links-compact">
+            <h2>Linki do galerii</h2>
+            <div class="link-item">
+                <span class="link-label">Link do galerii:</span>
+                <code class="link-url" data-url="{{.BaseURL}}/g/{{.Slug}}">{{.BaseURL}}/g/{{.Slug}}</code>
+                <div class="link-actions">
+                    <button type="button" onclick="copyUrl(this)">Kopiuj</button>
+                    <button type="button" onclick="openUrl(this)">Otwórz</button>
+                </div>
+            </div>
+            {{if .EditMode}}
+            <div class="link-item">
+                <span class="link-label">Edit Token:</span>
+                <code class="link-url" data-url="{{.EditToken}}">{{.EditToken}}</code>
+                <div class="link-actions">
+                    <button type="button" onclick="copyUrl(this)">Kopiuj</button>
+                </div>
+            </div>
+            <div class="link-item">
+                <span class="link-label">Link z edycją:</span>
+                <code class="link-url" data-url="{{.BaseURL}}/g/{{.Slug}}?edit={{.EditToken}}">{{.BaseURL}}/g/{{.Slug}}?edit={{.EditToken}}</code>
+                <div class="link-actions">
+                    <button type="button" onclick="copyUrl(this)">Kopiuj</button>
+                    <button type="button" onclick="openUrl(this)">Otwórz</button>
+                </div>
+            </div>
+            {{end}}
+        </div>
     </div>
 
     <div class="lightbox" id="lightbox">
@@ -552,9 +560,7 @@
         <div class="loading-spinner"></div>
     </div>
 
-    {{if .EditMode}}
     {{template "editor-modal.html" .}}
-    {{end}}
 
     <script>
         function showLoading() {
@@ -564,23 +570,39 @@
             document.getElementById('loadingOverlay').classList.remove('active');
         }
 
-        function copyLink(btn) {
-            const input = btn.previousElementSibling;
-            input.select();
-            navigator.clipboard.writeText(input.value);
-            btn.textContent = 'Skopiowano!';
-            setTimeout(() => btn.textContent = 'Kopiuj', 2000);
+        function getLinkUrl(btn) {
+            const item = btn.closest('.link-item');
+            const urlEl = item ? item.querySelector('.link-url') : null;
+            return urlEl ? urlEl.dataset.url || urlEl.textContent : '';
+        }
+
+        function copyUrl(btn) {
+            const url = getLinkUrl(btn);
+            if (!url) return;
+            navigator.clipboard.writeText(url);
+            btn.textContent = 'Skopiowano';
+            btn.classList.add('copied');
+            setTimeout(() => {
+                btn.textContent = 'Kopiuj';
+                btn.classList.remove('copied');
+            }, 2000);
+        }
+
+        function openUrl(btn) {
+            const url = getLinkUrl(btn);
+            if (!url) return;
+            window.open(url, '_blank');
         }
 
         const gallerySlug = '{{.Slug}}';
-        const editToken = '{{.EditToken}}';
+        let editToken = '{{.EditToken}}';
         const baseURL = '{{.BaseURL}}';
         const container = document.querySelector('.container');
         const tokenForm = document.getElementById('tokenForm');
         const tokenInput = document.getElementById('tokenInput');
+        const tokenStatus = document.getElementById('tokenStatus');
         const titleForm = document.getElementById('titleForm');
         const titleInput = document.getElementById('titleInput');
-        const addFiles = document.getElementById('addFiles');
         const gallery = document.getElementById('gallery');
         const lightbox = document.getElementById('lightbox');
         const lightboxImg = lightbox.querySelector('.lightbox-img');
@@ -601,17 +623,70 @@
 
         function enableEditMode() {
             container.classList.add('edit-mode');
+            editToken = tokenInput.value.trim();
+            if (tokenStatus) {
+                tokenStatus.textContent = 'Token poprawny. Tryb edycji aktywny.';
+                tokenStatus.classList.remove('error');
+                tokenStatus.classList.add('success');
+            }
             // Update URL with token
             const url = new URL(location.href);
             url.searchParams.set('edit', tokenInput.value);
             history.replaceState(null, '', url);
         }
 
-        tokenForm.addEventListener('submit', e => {
+        function getEditToken() {
+            return tokenInput.value.trim() || editToken;
+        }
+
+        tokenForm.addEventListener('submit', async e => {
             e.preventDefault();
-            if (tokenInput.value.trim()) {
-                enableEditMode();
+            const token = tokenInput.value.trim();
+            if (!token) return;
+
+            if (tokenStatus) {
+                tokenStatus.textContent = 'Sprawdzam token...';
+                tokenStatus.classList.remove('error', 'success');
             }
+
+            const formData = new FormData();
+            formData.append('title', titleInput.value);
+
+            try {
+                const res = await fetch(`/gallery/${gallerySlug}/title`, {
+                    method: 'POST',
+                    headers: { 'X-Edit-Token': token },
+                    body: formData
+                });
+
+                if (res.ok) {
+                    enableEditMode();
+                } else {
+                    let data = null;
+                    try {
+                        data = await res.json();
+                    } catch (err) {
+                        data = null;
+                    }
+                    if (tokenStatus) {
+                        tokenStatus.textContent = data?.error || 'Nieprawidłowy token';
+                        tokenStatus.classList.remove('success');
+                        tokenStatus.classList.add('error');
+                    }
+                }
+            } catch (err) {
+                if (tokenStatus) {
+                    tokenStatus.textContent = 'Błąd połączenia: ' + err.message;
+                    tokenStatus.classList.remove('success');
+                    tokenStatus.classList.add('error');
+                }
+            }
+        });
+
+        tokenInput.addEventListener('input', () => {
+            if (!tokenStatus) return;
+            tokenStatus.textContent = '';
+            tokenStatus.classList.remove('error', 'success');
         });
 
         titleForm.addEventListener('submit', async e => {
@@ -750,9 +825,15 @@
 
             showLoading();
             try {
+                const token = getEditToken();
+                if (!token) {
+                    alert('Wpisz edit token');
+                    hideLoading();
+                    return;
+                }
                 const response = await fetch(`${baseURL}/gallery/${gallerySlug}/${imageSlug}`, {
                     method: 'DELETE',
-                    headers: { 'X-Edit-Token': editToken }
+                    headers: { 'X-Edit-Token': token }
                 });
 
                 if (response.ok) {
@@ -803,7 +884,7 @@
                 try {
                     const res = await fetch(`/i/${currentEditingSlug}/edit`, {
                         method: 'POST',
-                        headers: { 'X-Edit-Token': editToken },
+                        headers: { 'X-Edit-Token': getEditToken() },
                         body: formData
                     });
 
@@ -834,34 +915,7 @@
             }, 'image/jpeg', 0.95);
         });
 
-        // Add images
-        addFiles.addEventListener('change', async () => {
-            const files = addFiles.files;
-            if (!files.length) return;
-
-            const formData = new FormData();
-            [...files].forEach(f => formData.append('files', f));
-
-            const token = tokenInput.value;
-            const res = await fetch(`/gallery/${gallerySlug}/add`, {
-                method: 'POST',
-                headers: { 'X-Edit-Token': token },
-                body: formData
-            });
-
-            const data = await res.json();
-            if (data.error) {
-                alert('Błąd: ' + data.error);
-            } else {
-                // Reload to show new images
-                location.reload();
-            }
-
-            addFiles.value = '';
-        });
-
         // Drag & drop upload
-        {{if .EditMode}}
         const dropzone = document.getElementById('addDropzone');
         const fileInput = document.getElementById('addFileInput');
 
@@ -934,8 +988,14 @@
                         progress.style.display = 'none';
                     };
 
+                    const token = getEditToken();
+                    if (!token) {
+                        alert('Wpisz edit token');
+                        progress.style.display = 'none';
+                        return;
+                    }
                     xhr.open('POST', `${baseURL}/gallery/${gallerySlug}/add`);
-                    xhr.setRequestHeader('X-Edit-Token', editToken);
+                    xhr.setRequestHeader('X-Edit-Token', token);
                     xhr.send(formData);
 
                 } catch (e) {
@@ -1004,7 +1064,6 @@
                 }
             }
         }
-        {{end}}
     </script>
 </body>
 </html>

@@ -1,25 +1,25 @@
 {{define "title"}}{{if .Gallery.Title}}{{.Gallery.Title}}{{else}}Galeria {{.Gallery.Slug}}{{end}} - Admin dajtu{{end}}
 {{define "content"}}
-    <h1>{{if .Gallery.Title}}{{.Gallery.Title}}{{else}}Galeria {{.Gallery.Slug}}{{end}} <a href="/g/{{.Gallery.Slug}}" class="public-link">-> widok publiczny</a></h1>
+    <h1>{{if .Gallery.Title}}{{.Gallery.Title}}{{else}}Galeria {{.Gallery.Slug}}{{end}} <a href="/g/{{.Gallery.Slug}}" class="public-link">→ widok publiczny</a></h1>
 
     <div class="summary">
         <h2>Podsumowanie</h2>
         <div class="summary-stats">
             <div class="summary-stat">
                 <div class="value">{{.Gallery.ImageCount}}</div>
-                <div class="label">zdj&eogon;&cacute;</div>
+                <div class="label">zdjęć</div>
             </div>
             <div class="summary-stat">
                 <div class="value">{{printf "%.2f" (divf .Gallery.TotalSize 1048576)}} MB</div>
-                <div class="label">&lstrok;&aogon;czny rozmiar</div>
+                <div class="label">łączny rozmiar</div>
             </div>
             <div class="summary-stat">
                 <div class="value">{{.Gallery.TotalViews}}</div>
-                <div class="label">&lstrok;&aogon;cznie pobra&nacute;</div>
+                <div class="label">łącznie pobrań</div>
             </div>
             <div class="summary-stat">
                 <div class="value">{{if .Gallery.OwnerSlug}}<a href="/u/{{.Gallery.OwnerSlug}}">{{.Gallery.OwnerName}}</a> <a href="/admin/users/{{.Gallery.OwnerSlug}}" class="adm">[ADM]</a>{{else}}-{{end}}</div>
-                <div class="label">w&lstrok;a&sacute;ciciel</div>
+                <div class="label">właściciel</div>
             </div>
             <div class="summary-stat">
                 <div class="value">{{formatDate .Gallery.CreatedAt}}</div>
@@ -28,9 +28,9 @@
         </div>
     </div>
 
-    <h3>Zdj&eogon;cia ({{len .Images}})</h3>
+    <h3>Zdjęcia ({{len .Images}})</h3>
     <table>
-        <tr><th>Podgl&aogon;d</th><th>Nazwa</th><th>Rozmiar</th><th>Pobra&nacute;</th><th>Ostatni</th><th>Akcje</th></tr>
+        <tr><th>Podgląd</th><th>Nazwa</th><th>Rozmiar</th><th>Pobrań</th><th>Ostatni</th><th>Akcje</th></tr>
         {{range .Images}}
         <tr>
             <td><a href="/i/{{.Slug}}" target="_blank"><img src="/i/{{.Slug}}/thumb.webp" class="thumb"></a></td>
@@ -39,19 +39,19 @@
             <td>{{.Downloads}}</td>
             <td>{{formatDate .AccessedAt}}</td>
             <td>
-                <form method="POST" action="/admin/images/{{.ID}}/delete" style="display:inline" onsubmit="return confirm('Usun&aogon;&cacute; zdj&eogon;cie?')">
-                    <button class="btn-delete">Usu&nacute;</button>
+                <form method="POST" action="/admin/images/{{.ID}}/delete" style="display:inline" onsubmit="return confirm('Usunąć zdjęcie?')">
+                    <button class="btn-delete">Usuń</button>
                 </form>
             </td>
         </tr>
         {{else}}
-        <tr><td colspan="6" style="color:#666;">Brak zdj&eogon;&cacute;</td></tr>
+        <tr><td colspan="6" style="color:#666;">Brak zdjęć</td></tr>
         {{end}}
     </table>
 
     <div style="margin-top: 20px;">
-        <form method="POST" action="/admin/galleries/{{.Gallery.ID}}/delete" style="display:inline" onsubmit="return confirm('Usun&aogon;&cacute; galeri&eogon; ze wszystkimi zdj&eogon;ciami?')">
-            <button class="btn-delete">Usu&nacute; ca&lstrok;&aogon; galeri&eogon;</button>
+        <form method="POST" action="/admin/galleries/{{.Gallery.ID}}/delete" style="display:inline" onsubmit="return confirm('Usunąć galerię ze wszystkimi zdjęciami?')">
+            <button class="btn-delete">Usuń całą galerię</button>
         </form>
     </div>
 {{end}}
