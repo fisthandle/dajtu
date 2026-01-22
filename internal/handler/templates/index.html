@@ -12,28 +12,26 @@
             background: #111;
             color: #fff;
             min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            margin: 0;
+            padding: 0;
         }
         .container {
-            max-width: 600px;
+            max-width: 80%;
             width: 100%;
-            padding: 40px 20px;
+            margin: 0 auto;
+            padding: 20px;
         }
         h1 {
             font-size: 2.5rem;
             font-weight: 300;
-            margin-bottom: 10px;
-        }
-        .subtitle {
-            color: #666;
-            margin-bottom: 40px;
+            margin-top: 1em;
+            margin-bottom: 20px;
+            text-align: center;
         }
         .upload-area {
             border: 2px dashed #333;
             border-radius: 12px;
-            padding: 60px 20px;
+            padding: 30px 20px;
             text-align: center;
             cursor: pointer;
             transition: all 0.2s;
@@ -255,7 +253,6 @@
     {{ end }}
     <div class="container">
         <h1>dajtu</h1>
-        <p class="subtitle">Szybki hosting obrazków</p>
 
         <form id="uploadForm" enctype="multipart/form-data">
             <div class="upload-area" id="dropArea">
