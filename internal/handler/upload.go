@@ -282,7 +282,8 @@ type ImageEditHandler struct {
 	cfg       *config.Config
 }
 
-func NewImageEditHandler(db *storage.DB, fs *storage.Filesystem, tmpl *template.Template, processor *image.Processor, cfg *config.Config) *ImageEditHandler {
+func NewImageEditHandler(db *storage.DB, fs *storage.Filesystem, processor *image.Processor, cfg *config.Config) *ImageEditHandler {
+	tmpl := template.Must(template.ParseFS(templates, "templates/edit_image.html"))
 	return &ImageEditHandler{db: db, fs: fs, tmpl: tmpl, processor: processor, cfg: cfg}
 }
 

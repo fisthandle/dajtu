@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"html/template"
 	"log"
 	"net/http"
 	"strings"
@@ -63,8 +62,7 @@ func main() {
 
 	imageViewHandler := handler.NewImageViewHandler(db, cfg)
 
-	editImageTmpl := template.Must(template.ParseFiles("internal/handler/templates/edit_image.html"))
-	imageEditHandler := handler.NewImageEditHandler(db, fs, editImageTmpl, processor, cfg)
+	imageEditHandler := handler.NewImageEditHandler(db, fs, processor, cfg)
 
 	mux := http.NewServeMux()
 
