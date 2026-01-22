@@ -1,3 +1,4 @@
+{{define "image.html"}}
 <!DOCTYPE html>
 <html lang="pl">
 <head>
@@ -314,7 +315,7 @@
     </div>
 
     <!-- Editor Modal -->
-    {{template "partials/editor-modal.html"}}
+    {{template "editor-modal.html" .}}
 
     <script>
     const baseURL = '{{.BaseURL}}';
@@ -466,3 +467,4 @@
     </script>
 </body>
 </html>
+{{end}}

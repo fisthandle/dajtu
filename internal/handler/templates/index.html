@@ -1,3 +1,4 @@
+{{define "index.html"}}
 <!DOCTYPE html>
 <html lang="pl">
 <head>
@@ -245,7 +246,7 @@
         </div>
     </div>
 
-    {{template "partials/editor-modal.html" .}}
+    {{template "editor-modal.html" .}}
 
     <script>
         const flash = sessionStorage.getItem('flash');
@@ -472,3 +473,4 @@
     </script>
 </body>
 </html>
+{{end}}

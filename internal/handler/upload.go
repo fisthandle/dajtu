@@ -259,7 +259,7 @@ func (h *ImageViewHandler) ServeHTTP(w http.ResponseWriter, r *http.Request, slu
 		"EditMode":  editMode,
 	}
 
-	if err := h.tmpl.Execute(w, data); err != nil {
+	if err := h.tmpl.ExecuteTemplate(w, "image.html", data); err != nil {
 		log.Printf("template error: %v", err)
 		http.Error(w, "Internal server error", 500)
 	}

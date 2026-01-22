@@ -47,10 +47,12 @@ func (h *GalleryHandler) Index(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	h.indexTmpl.Execute(w, map[string]any{
+	if err := h.indexTmpl.ExecuteTemplate(w, "index.html", map[string]any{
 		"User":    userData,
 		"Welcome": r.URL.Query().Get("welcome") == "1",
-	})
+	}); err != nil {
+		log.Printf("index template error: %v", err)
+	}
 }
 
 type GalleryCreateResponse struct {
@@ -545,7 +547,7 @@ func (h *GalleryHandler) View(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := h.galleryTmpl.Execute(w, data); err != nil {
+	if err := h.galleryTmpl.ExecuteTemplate(w, "gallery.html", data); err != nil {
 		log.Printf("template error: %v", err)
 	}
 }
