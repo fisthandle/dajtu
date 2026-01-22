@@ -41,6 +41,7 @@ type Image struct {
 	AccessedAt   int64
 	Downloads    int64
 	GalleryID    *int64
+	Edited       bool
 }
 
 type Gallery struct {
@@ -178,14 +179,20 @@ func (db *DB) migrate() error {
 		return fmt.Errorf("migrate downloads: %w", err)
 	}
 
+	// Migration: add edited column if missing
+	_, err = db.conn.Exec(`ALTER TABLE images ADD COLUMN edited INTEGER NOT NULL DEFAULT 0`)
+	if err != nil && !strings.Contains(err.Error(), "duplicate column") {
+		return fmt.Errorf("migrate edited: %w", err)
+	}
+
 	return nil
 }
 
 func (db *DB) InsertImage(img *Image) (int64, error) {
 	res, err := db.conn.Exec(`
-		INSERT INTO images (slug, original_name, mime_type, file_size, width, height, user_id, created_at, accessed_at, downloads, gallery_id)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		img.Slug, img.OriginalName, img.MimeType, img.FileSize, img.Width, img.Height, img.UserID, img.CreatedAt, img.AccessedAt, img.Downloads, img.GalleryID)
+		INSERT INTO images (slug, original_name, mime_type, file_size, width, height, user_id, created_at, accessed_at, downloads, gallery_id, edited)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		img.Slug, img.OriginalName, img.MimeType, img.FileSize, img.Width, img.Height, img.UserID, img.CreatedAt, img.AccessedAt, img.Downloads, img.GalleryID, img.Edited)
 	if err != nil {
 		return 0, err
 	}
@@ -195,10 +202,10 @@ func (db *DB) InsertImage(img *Image) (int64, error) {
 func (db *DB) GetImageBySlug(slug string) (*Image, error) {
 	img := &Image{}
 	err := db.conn.QueryRow(`
-		SELECT id, slug, original_name, mime_type, file_size, width, height, user_id, created_at, accessed_at, downloads, gallery_id
+		SELECT id, slug, original_name, mime_type, file_size, width, height, user_id, created_at, accessed_at, downloads, gallery_id, edited
 		FROM images WHERE slug = ?`, slug).Scan(
 		&img.ID, &img.Slug, &img.OriginalName, &img.MimeType, &img.FileSize, &img.Width, &img.Height,
-		&img.UserID, &img.CreatedAt, &img.AccessedAt, &img.Downloads, &img.GalleryID)
+		&img.UserID, &img.CreatedAt, &img.AccessedAt, &img.Downloads, &img.GalleryID, &img.Edited)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -472,7 +479,7 @@ func hashSessionToken(token string) string {
 
 func (db *DB) GetGalleryImages(galleryID int64) ([]*Image, error) {
 	rows, err := db.conn.Query(`
-		SELECT id, slug, original_name, mime_type, file_size, width, height, user_id, created_at, accessed_at, downloads, gallery_id
+		SELECT id, slug, original_name, mime_type, file_size, width, height, user_id, created_at, accessed_at, downloads, gallery_id, edited
 		FROM images WHERE gallery_id = ? ORDER BY created_at`, galleryID)
 	if err != nil {
 		return nil, err
@@ -483,7 +490,7 @@ func (db *DB) GetGalleryImages(galleryID int64) ([]*Image, error) {
 	for rows.Next() {
 		img := &Image{}
 		if err := rows.Scan(&img.ID, &img.Slug, &img.OriginalName, &img.MimeType, &img.FileSize, &img.Width, &img.Height,
-			&img.UserID, &img.CreatedAt, &img.AccessedAt, &img.Downloads, &img.GalleryID); err != nil {
+			&img.UserID, &img.CreatedAt, &img.AccessedAt, &img.Downloads, &img.GalleryID, &img.Edited); err != nil {
 			return nil, err
 		}
 		images = append(images, img)
@@ -499,7 +506,7 @@ func (db *DB) GetGalleryImagesPaginated(galleryID int64, limit, offset int) ([]*
 	}
 
 	rows, err := db.conn.Query(`
-		SELECT id, slug, original_name, mime_type, file_size, width, height, user_id, created_at, accessed_at, downloads, gallery_id
+		SELECT id, slug, original_name, mime_type, file_size, width, height, user_id, created_at, accessed_at, downloads, gallery_id, edited
 		FROM images WHERE gallery_id = ?
 		ORDER BY created_at DESC
 		LIMIT ? OFFSET ?
@@ -513,7 +520,7 @@ func (db *DB) GetGalleryImagesPaginated(galleryID int64, limit, offset int) ([]*
 	for rows.Next() {
 		img := &Image{}
 		if err := rows.Scan(&img.ID, &img.Slug, &img.OriginalName, &img.MimeType, &img.FileSize, &img.Width, &img.Height,
-			&img.UserID, &img.CreatedAt, &img.AccessedAt, &img.Downloads, &img.GalleryID); err != nil {
+			&img.UserID, &img.CreatedAt, &img.AccessedAt, &img.Downloads, &img.GalleryID, &img.Edited); err != nil {
 			return nil, 0, err
 		}
 		images = append(images, img)
@@ -529,7 +536,7 @@ func (db *DB) DeleteImageBySlug(slug string) error {
 
 func (db *DB) GetOldestImages(limit int) ([]*Image, error) {
 	rows, err := db.conn.Query(`
-		SELECT id, slug, original_name, mime_type, file_size, width, height, user_id, created_at, accessed_at, downloads, gallery_id
+		SELECT id, slug, original_name, mime_type, file_size, width, height, user_id, created_at, accessed_at, downloads, gallery_id, edited
 		FROM images ORDER BY accessed_at ASC LIMIT ?`, limit)
 	if err != nil {
 		return nil, err
@@ -540,7 +547,7 @@ func (db *DB) GetOldestImages(limit int) ([]*Image, error) {
 	for rows.Next() {
 		img := &Image{}
 		if err := rows.Scan(&img.ID, &img.Slug, &img.OriginalName, &img.MimeType, &img.FileSize, &img.Width, &img.Height,
-			&img.UserID, &img.CreatedAt, &img.AccessedAt, &img.Downloads, &img.GalleryID); err != nil {
+			&img.UserID, &img.CreatedAt, &img.AccessedAt, &img.Downloads, &img.GalleryID, &img.Edited); err != nil {
 			return nil, err
 		}
 		images = append(images, img)
@@ -752,5 +759,15 @@ func (db *DB) GetImageByID(id int64) (*Image, error) {
 
 func (db *DB) DeleteImageByID(id int64) error {
 	_, err := db.conn.Exec(`DELETE FROM images WHERE id = ?`, id)
+	return err
+}
+
+func (db *DB) MarkImageEdited(slug string) error {
+	_, err := db.conn.Exec("UPDATE images SET edited = 1 WHERE slug = ?", slug)
+	return err
+}
+
+func (db *DB) UnmarkImageEdited(slug string) error {
+	_, err := db.conn.Exec("UPDATE images SET edited = 0 WHERE slug = ?", slug)
 	return err
 }
