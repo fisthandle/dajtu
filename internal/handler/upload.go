@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"html/template"
 	"log"
 	"net/http"
 	"path/filepath"
@@ -10,6 +11,7 @@ import (
 
 	"dajtu/internal/config"
 	"dajtu/internal/image"
+	"dajtu/internal/middleware"
 	"dajtu/internal/storage"
 )
 
@@ -211,4 +213,35 @@ func (h *UploadHandler) ServeOriginal(w http.ResponseWriter, r *http.Request, sl
 	w.Header().Set("Content-Type", contentType)
 	w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 	http.ServeFile(w, r, path)
+}
+
+type ImageViewHandler struct {
+	db      *storage.DB
+	tmpl    *template.Template
+	baseURL string
+}
+
+func NewImageViewHandler(db *storage.DB, tmpl *template.Template, baseURL string) *ImageViewHandler {
+	return &ImageViewHandler{db: db, tmpl: tmpl, baseURL: baseURL}
+}
+
+func (h *ImageViewHandler) ServeHTTP(w http.ResponseWriter, r *http.Request, slug string) {
+	img, err := h.db.GetImageBySlug(slug)
+	if err != nil {
+		http.Error(w, "Not found", 404)
+		return
+	}
+
+	canEdit := false
+	if user := middleware.GetUser(r); user != nil && img.UserID != nil && user.ID == *img.UserID {
+		canEdit = true
+	}
+
+	data := map[string]interface{}{
+		"Image":   img,
+		"BaseURL": h.baseURL,
+		"CanEdit": canEdit,
+	}
+
+	h.tmpl.ExecuteTemplate(w, "image.html", data)
 }

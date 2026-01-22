@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"html/template"
 	"log"
 	"net/http"
 	"strings"
@@ -56,6 +57,9 @@ func main() {
 	adminMiddleware := middleware.NewAdminMiddleware(cfg.AdminNicks)
 
 	bratUploadHandler := handler.NewBratUploadHandler(cfg, db, fs, authHandler.GetDecoder())
+
+	imageViewTmpl := template.Must(template.ParseFiles("internal/handler/templates/image.html"))
+	imageViewHandler := handler.NewImageViewHandler(db, imageViewTmpl, cfg.BaseURL)
 
 	mux := http.NewServeMux()
 
@@ -127,16 +131,25 @@ func main() {
 			return
 		}
 
+		// /i/{slug} - image view page (HTML)
+		if len(parts) == 1 && !strings.HasSuffix(parts[0], ".webp") {
+			imageViewHandler.ServeHTTP(w, r, slug)
+			return
+		}
+
+		// Track access for image files
 		go func() {
 			_ = db.TouchImageBySlug(slug)
 			_ = db.IncrementDownloads(slug)
 		}()
 
+		// /i/{slug}/original - original format
 		if len(parts) == 2 && parts[1] == "original" {
 			uploadHandler.ServeOriginal(w, r, slug)
 			return
 		}
 
+		// /i/{slug}/{size}.webp - WebP sizes
 		validSizes := map[string]bool{
 			"original.webp": true, "1920.webp": true, "800.webp": true,
 			"200.webp": true, "thumb.webp": true,
