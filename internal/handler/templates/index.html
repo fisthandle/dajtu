@@ -317,6 +317,9 @@
                     </div>
                     <div class="separator"></div>
                     <button id="editorReset" title="Resetuj wszystko">⟲ Reset</button>
+                    <div class="separator"></div>
+                    <button id="applyEdit" style="background: #4a9eff; color: white;">✓ Zastosuj</button>
+                    <button id="cancelEdit">✕ Anuluj</button>
                 </div>
                 <div class="editor-canvas-wrap" id="editorCanvasWrap">
                     <img id="editorImage" src="" alt="Edit">
@@ -368,6 +371,8 @@
         let isRestoring = false;
         let zoomTimer = null;
         let editedFiles = {};
+        let currentEditIndex = null;
+        let originalFileData = {};
 
         const aspectButtons = [
             { id: 'aspectFree', ratio: NaN },
@@ -497,6 +502,80 @@
             initEditor(files[0]);
         }
 
+        function openEditorForFile(index) {
+            currentEditIndex = index;
+            const file = fileInput.files[index];
+
+            if (!originalFileData[index]) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    originalFileData[index] = e.target.result;
+                    loadEditorImage(e.target.result);
+                };
+                reader.readAsDataURL(file);
+            } else {
+                loadEditorImage(originalFileData[index]);
+            }
+        }
+
+        function loadEditorImage(dataUrl) {
+            destroyEditor();
+            editorImage.src = dataUrl;
+            editorImage.onload = () => {
+                cropper = new Cropper(editorImage, {
+                    viewMode: 1,
+                    autoCropArea: 1,
+                    background: false,
+                    responsive: true,
+                    checkOrientation: true,
+                    ready() {
+                        editorContainer.classList.add('active');
+                        setAspectRatio(NaN);
+                        saveState();
+                        updateEditorUI();
+                    },
+                    crop() {
+                        updateEditorUI();
+                    }
+                });
+            };
+        }
+
+        function closeEditor() {
+            editorContainer.classList.remove('active');
+            currentEditIndex = null;
+            if (cropper) {
+                cropper.destroy();
+                cropper = null;
+            }
+        }
+
+        function applyEdit() {
+            if (!cropper || currentEditIndex === null) return;
+
+            const canvas = cropper.getCroppedCanvas({
+                maxWidth: 4096,
+                maxHeight: 4096,
+                imageSmoothingEnabled: true,
+                imageSmoothingQuality: 'high'
+            });
+
+            canvas.toBlob((blob) => {
+                editedFiles[currentEditIndex] = {
+                    blob: blob,
+                    transforms: getTransformParams()
+                };
+
+                const item = preview.querySelector(`[data-index="${currentEditIndex}"]`);
+                if (item) {
+                    const img = item.querySelector('img');
+                    img.src = URL.createObjectURL(blob);
+                }
+
+                closeEditor();
+            }, 'image/jpeg', 0.95);
+        }
+
         function normalizeRotation(angle) {
             if (!Number.isFinite(angle)) return 0;
             let rotation = Math.round(angle) % 360;
@@ -557,8 +636,12 @@
             if (editedFiles[index]) {
                 delete editedFiles[index];
             }
-            // Przeindeksuj editedFiles
+            if (originalFileData[index]) {
+                delete originalFileData[index];
+            }
+            // Przeindeksuj editedFiles i originalFileData
             const newEditedFiles = {};
+            const newOriginalFileData = {};
             Object.keys(editedFiles).forEach(key => {
                 const oldIndex = parseInt(key);
                 if (oldIndex > index) {
@@ -567,7 +650,16 @@
                     newEditedFiles[key] = editedFiles[key];
                 }
             });
+            Object.keys(originalFileData).forEach(key => {
+                const oldIndex = parseInt(key);
+                if (oldIndex > index) {
+                    newOriginalFileData[oldIndex - 1] = originalFileData[key];
+                } else {
+                    newOriginalFileData[key] = originalFileData[key];
+                }
+            });
             editedFiles = newEditedFiles;
+            originalFileData = newOriginalFileData;
 
             fileInput.files = dt.files;
             updatePreview();
@@ -645,6 +737,9 @@
         });
         editorUndo.addEventListener('click', () => restoreState(historyIndex - 1));
         editorRedo.addEventListener('click', () => restoreState(historyIndex + 1));
+
+        document.getElementById('applyEdit').addEventListener('click', applyEdit);
+        document.getElementById('cancelEdit').addEventListener('click', closeEditor);
 
         aspectButtons.forEach(({ id, ratio }) => {
             document.getElementById(id).addEventListener('click', () => {
