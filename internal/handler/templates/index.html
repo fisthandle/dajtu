@@ -212,6 +212,7 @@
     {{ end }}
     {{ if .User }}
     <div class="user-info">
+        {{ if .IsAdmin }}<a href="/admin">admin</a>{{ end }}
         <span>Zalogowano jako <a href="/u/{{ .User.Slug }}">{{ .User.DisplayName }}</a></span>
         <form method="post" action="/logout" style="margin:0;">
             <button type="submit">wyloguj</button>

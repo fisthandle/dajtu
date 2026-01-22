@@ -192,6 +192,12 @@ func (db *DB) migrate() error {
 		return fmt.Errorf("migrate edit_token: %w", err)
 	}
 
+	// Migration: add updated_at column to users if missing
+	_, err = db.conn.Exec(`ALTER TABLE users ADD COLUMN updated_at INTEGER NOT NULL DEFAULT 0`)
+	if err != nil && !strings.Contains(err.Error(), "duplicate column") {
+		return fmt.Errorf("migrate users.updated_at: %w", err)
+	}
+
 	return nil
 }
 
@@ -615,9 +621,166 @@ type ImageAdmin struct {
 	Downloads    int64
 	CreatedAt    int64
 	AccessedAt   int64
+	Edited       bool
 	OwnerName    string
 	OwnerSlug    string
 	GallerySlug  string
+}
+
+type UserAdmin struct {
+	ID           int64
+	Slug         string
+	DisplayName  string
+	CreatedAt    int64
+	UpdatedAt    int64
+	GalleryCount int
+	ImageCount   int
+	TotalSize    int64
+	TotalViews   int64
+}
+
+func (db *DB) GetUserAdmin(slug string) (*UserAdmin, error) {
+	u := &UserAdmin{}
+	err := db.conn.QueryRow(`
+		SELECT u.id, u.slug, u.display_name, u.created_at, COALESCE(u.updated_at, u.created_at),
+		       (SELECT COUNT(*) FROM galleries WHERE user_id = u.id) as gallery_count,
+		       (SELECT COUNT(*) FROM images WHERE user_id = u.id) as image_count,
+		       (SELECT COALESCE(SUM(file_size), 0) FROM images WHERE user_id = u.id) as total_size,
+		       (SELECT COALESCE(SUM(downloads), 0) FROM images WHERE user_id = u.id) as total_views
+		FROM users u WHERE u.slug = ?`, slug).Scan(
+		&u.ID, &u.Slug, &u.DisplayName, &u.CreatedAt, &u.UpdatedAt,
+		&u.GalleryCount, &u.ImageCount, &u.TotalSize, &u.TotalViews)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return u, err
+}
+
+func (db *DB) GetUserGalleriesAdmin(userID int64) ([]*GalleryAdmin, error) {
+	rows, err := db.conn.Query(`
+		SELECT g.id, g.slug, g.title, g.user_id, g.created_at,
+		       COUNT(i.id) as image_count,
+		       COALESCE(u.display_name, '') as owner_name,
+		       COALESCE(u.slug, '') as owner_slug
+		FROM galleries g
+		LEFT JOIN images i ON i.gallery_id = g.id
+		LEFT JOIN users u ON u.id = g.user_id
+		WHERE g.user_id = ?
+		GROUP BY g.id
+		ORDER BY g.created_at DESC
+	`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var galleries []*GalleryAdmin
+	for rows.Next() {
+		g := &GalleryAdmin{}
+		if err := rows.Scan(&g.ID, &g.Slug, &g.Title, &g.UserID, &g.CreatedAt, &g.ImageCount, &g.OwnerName, &g.OwnerSlug); err != nil {
+			return nil, err
+		}
+		galleries = append(galleries, g)
+	}
+	return galleries, rows.Err()
+}
+
+func (db *DB) GetUserImagesAdmin(userID int64, limit, offset int) ([]*ImageAdmin, error) {
+	rows, err := db.conn.Query(`
+		SELECT i.id, i.slug, i.original_name, i.file_size, i.downloads, i.created_at, i.accessed_at, i.edited,
+		       COALESCE(u.display_name, '') as owner_name,
+		       COALESCE(u.slug, '') as owner_slug,
+		       COALESCE(g.slug, '') as gallery_slug
+		FROM images i
+		LEFT JOIN users u ON u.id = i.user_id
+		LEFT JOIN galleries g ON g.id = i.gallery_id
+		WHERE i.user_id = ?
+		ORDER BY i.created_at DESC
+		LIMIT ? OFFSET ?
+	`, userID, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var images []*ImageAdmin
+	for rows.Next() {
+		img := &ImageAdmin{}
+		if err := rows.Scan(&img.ID, &img.Slug, &img.OriginalName, &img.FileSize, &img.Downloads, &img.CreatedAt, &img.AccessedAt, &img.Edited, &img.OwnerName, &img.OwnerSlug, &img.GallerySlug); err != nil {
+			return nil, err
+		}
+		images = append(images, img)
+	}
+	return images, rows.Err()
+}
+
+type GalleryDetailAdmin struct {
+	ID          int64
+	Slug        string
+	Title       string
+	Description string
+	UserID      *int64
+	OwnerName   string
+	OwnerSlug   string
+	CreatedAt   int64
+	UpdatedAt   int64
+	ImageCount  int
+	TotalSize   int64
+	TotalViews  int64
+}
+
+func (db *DB) GetGalleryAdmin(slug string) (*GalleryDetailAdmin, error) {
+	g := &GalleryDetailAdmin{}
+	var ownerID sql.NullInt64
+	err := db.conn.QueryRow(`
+		SELECT g.id, g.slug, g.title, g.description, g.user_id,
+		       COALESCE(u.display_name, '') as owner_name,
+		       COALESCE(u.slug, '') as owner_slug,
+		       g.created_at, COALESCE(g.updated_at, g.created_at),
+		       (SELECT COUNT(*) FROM images WHERE gallery_id = g.id) as image_count,
+		       (SELECT COALESCE(SUM(file_size), 0) FROM images WHERE gallery_id = g.id) as total_size,
+		       (SELECT COALESCE(SUM(downloads), 0) FROM images WHERE gallery_id = g.id) as total_views
+		FROM galleries g
+		LEFT JOIN users u ON u.id = g.user_id
+		WHERE g.slug = ?`, slug).Scan(
+		&g.ID, &g.Slug, &g.Title, &g.Description, &ownerID,
+		&g.OwnerName, &g.OwnerSlug, &g.CreatedAt, &g.UpdatedAt,
+		&g.ImageCount, &g.TotalSize, &g.TotalViews)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if ownerID.Valid {
+		g.UserID = &ownerID.Int64
+	}
+	return g, err
+}
+
+func (db *DB) GetGalleryImagesAdmin(galleryID int64) ([]*ImageAdmin, error) {
+	rows, err := db.conn.Query(`
+		SELECT i.id, i.slug, i.original_name, i.file_size, i.downloads, i.created_at, i.accessed_at, i.edited,
+		       COALESCE(u.display_name, '') as owner_name,
+		       COALESCE(u.slug, '') as owner_slug,
+		       COALESCE(g.slug, '') as gallery_slug
+		FROM images i
+		LEFT JOIN users u ON u.id = i.user_id
+		LEFT JOIN galleries g ON g.id = i.gallery_id
+		WHERE i.gallery_id = ?
+		ORDER BY i.created_at DESC
+	`, galleryID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var images []*ImageAdmin
+	for rows.Next() {
+		img := &ImageAdmin{}
+		if err := rows.Scan(&img.ID, &img.Slug, &img.OriginalName, &img.FileSize, &img.Downloads, &img.CreatedAt, &img.AccessedAt, &img.Edited, &img.OwnerName, &img.OwnerSlug, &img.GallerySlug); err != nil {
+			return nil, err
+		}
+		images = append(images, img)
+	}
+	return images, rows.Err()
 }
 
 func (db *DB) GetStats() (*Stats, error) {
@@ -739,7 +902,7 @@ func (db *DB) DeleteGalleryByID(id int64) error {
 
 func (db *DB) ListImagesAdmin(limit, offset int) ([]*ImageAdmin, error) {
 	rows, err := db.conn.Query(`
-		SELECT i.id, i.slug, i.original_name, i.file_size, i.downloads, i.created_at, i.accessed_at,
+		SELECT i.id, i.slug, i.original_name, i.file_size, i.downloads, i.created_at, i.accessed_at, i.edited,
 		       COALESCE(u.display_name, '') as owner_name,
 		       COALESCE(u.slug, '') as owner_slug,
 		       COALESCE(g.slug, '') as gallery_slug
@@ -757,12 +920,12 @@ func (db *DB) ListImagesAdmin(limit, offset int) ([]*ImageAdmin, error) {
 	var images []*ImageAdmin
 	for rows.Next() {
 		img := &ImageAdmin{}
-		if err := rows.Scan(&img.ID, &img.Slug, &img.OriginalName, &img.FileSize, &img.Downloads, &img.CreatedAt, &img.AccessedAt, &img.OwnerName, &img.OwnerSlug, &img.GallerySlug); err != nil {
+		if err := rows.Scan(&img.ID, &img.Slug, &img.OriginalName, &img.FileSize, &img.Downloads, &img.CreatedAt, &img.AccessedAt, &img.Edited, &img.OwnerName, &img.OwnerSlug, &img.GallerySlug); err != nil {
 			return nil, err
 		}
 		images = append(images, img)
 	}
-	return images, nil
+	return images, rows.Err()
 }
 
 func (db *DB) GetImageByID(id int64) (*Image, error) {

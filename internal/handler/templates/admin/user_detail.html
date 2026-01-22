@@ -1,0 +1,75 @@
+{{define "title"}}{{.User.DisplayName}} - Admin dajtu{{end}}
+{{define "content"}}
+    <h1>{{.User.DisplayName}} <a href="/u/{{.User.Slug}}" class="public-link">-> profil publiczny</a></h1>
+
+    <div class="summary">
+        <h2>Podsumowanie</h2>
+        <div class="summary-stats">
+            <div class="summary-stat">
+                <div class="value">{{.User.GalleryCount}}</div>
+                <div class="label">galerii</div>
+            </div>
+            <div class="summary-stat">
+                <div class="value">{{.User.ImageCount}}</div>
+                <div class="label">zdj&eogon;&cacute;</div>
+            </div>
+            <div class="summary-stat">
+                <div class="value">{{printf "%.2f" (divf .User.TotalSize 1048576)}} MB</div>
+                <div class="label">zaj&eogon;te miejsce</div>
+            </div>
+            <div class="summary-stat">
+                <div class="value">{{.User.TotalViews}}</div>
+                <div class="label">&lstrok;&aogon;cznie pobra&nacute;</div>
+            </div>
+            <div class="summary-stat">
+                <div class="value">{{formatDate .User.CreatedAt}}</div>
+                <div class="label">utworzony</div>
+            </div>
+        </div>
+    </div>
+
+    <h3>Galerie ({{len .Galleries}})</h3>
+    <table>
+        <tr><th>ID</th><th>Tytu&lstrok;</th><th>Zdj&eogon;&cacute;</th><th>Utworzona</th><th>Akcje</th></tr>
+        {{range .Galleries}}
+        <tr>
+            <td>{{.ID}}</td>
+            <td>
+                <a href="/g/{{.Slug}}" target="_blank">{{if .Title}}{{.Title}}{{else}}(bez tytu&lstrok;u){{end}}</a>
+                <a href="/admin/galleries/{{.Slug}}" class="adm">[ADM]</a>
+            </td>
+            <td>{{.ImageCount}}</td>
+            <td>{{formatDate .CreatedAt}}</td>
+            <td>
+                <form method="POST" action="/admin/galleries/{{.ID}}/delete" style="display:inline" onsubmit="return confirm('Usun&aogon;&cacute; galeri&eogon; ze wszystkimi zdj&eogon;ciami?')">
+                    <button class="btn-delete">Usu&nacute;</button>
+                </form>
+            </td>
+        </tr>
+        {{else}}
+        <tr><td colspan="5" style="color:#666;">Brak galerii</td></tr>
+        {{end}}
+    </table>
+
+    <h3>Zdj&eogon;cia ({{len .Images}})</h3>
+    <table>
+        <tr><th>Podgl&aogon;d</th><th>Nazwa</th><th>Galeria</th><th>Rozmiar</th><th>Pobra&nacute;</th><th>Akcje</th></tr>
+        {{range .Images}}
+        <tr>
+            <td><a href="/i/{{.Slug}}" target="_blank"><img src="/i/{{.Slug}}/thumb.webp" class="thumb"></a></td>
+            <td>{{.OriginalName}}</td>
+            <td>{{if .GallerySlug}}<a href="/g/{{.GallerySlug}}">{{.GallerySlug}}</a> <a href="/admin/galleries/{{.GallerySlug}}" class="adm">[ADM]</a>{{else}}-{{end}}</td>
+            <td>{{printf "%.1f" (divf .FileSize 1024)}} KB</td>
+            <td>{{.Downloads}}</td>
+            <td>
+                <form method="POST" action="/admin/images/{{.ID}}/delete" style="display:inline" onsubmit="return confirm('Usun&aogon;&cacute; zdj&eogon;cie?')">
+                    <button class="btn-delete">Usu&nacute;</button>
+                </form>
+            </td>
+        </tr>
+        {{else}}
+        <tr><td colspan="6" style="color:#666;">Brak zdj&eogon;&cacute;</td></tr>
+        {{end}}
+    </table>
+{{end}}
+{{template "admin_base" .}}
