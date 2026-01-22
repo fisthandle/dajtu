@@ -251,6 +251,17 @@ func (db *DB) GetGalleryBySlug(slug string) (*Gallery, error) {
 	return g, err
 }
 
+func (db *DB) GetGalleryByID(id int64) (*Gallery, error) {
+	g := &Gallery{}
+	err := db.conn.QueryRow(`
+		SELECT id, slug, edit_token, title, description, user_id, external_id, created_at, updated_at
+		FROM galleries WHERE id = ?`, id).Scan(&g.ID, &g.Slug, &g.EditToken, &g.Title, &g.Description, &g.UserID, &g.ExternalID, &g.CreatedAt, &g.UpdatedAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return g, err
+}
+
 func (db *DB) GetGalleryByExternalID(externalID string) (*Gallery, error) {
 	g := &Gallery{}
 	err := db.conn.QueryRow(`

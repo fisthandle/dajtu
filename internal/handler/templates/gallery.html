@@ -17,7 +17,7 @@
 
         /* Container & Header */
         .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
-        .header { text-align: center; margin-bottom: 20px; }
+        .header { text-align: center; margin-top: 10px; margin-bottom: 20px; }
         .header .logo { font-size: 2rem; font-weight: 300; }
         .header .logo a { color: #fff; text-decoration: none; }
         .gallery-header { text-align: center; margin-bottom: 20px; }
@@ -629,15 +629,20 @@
             });
 
             if (res.ok) {
-                // Update h1 if exists
-                const h1 = document.querySelector('h1');
-                if (h1) {
-                    h1.textContent = newTitle || 'Galeria';
-                    if (!newTitle) h1.remove();
-                } else if (newTitle) {
-                    const newH1 = document.createElement('h1');
-                    newH1.textContent = newTitle;
-                    container.insertBefore(newH1, container.firstChild);
+                // Update gallery title
+                let titleEl = document.querySelector('.gallery-title');
+                if (newTitle) {
+                    if (titleEl) {
+                        titleEl.textContent = newTitle;
+                    } else {
+                        titleEl = document.createElement('h2');
+                        titleEl.className = 'gallery-title';
+                        titleEl.textContent = newTitle;
+                        const header = document.querySelector('.header');
+                        header.insertAdjacentElement('afterend', titleEl);
+                    }
+                } else if (titleEl) {
+                    titleEl.remove();
                 }
             } else {
                 const data = await res.json();
@@ -771,10 +776,63 @@
         }
 
         // Edit image
+        let currentEditingSlug = null;
+
         function editImage(imageSlug) {
+            currentEditingSlug = imageSlug;
             const imageUrl = `${baseURL}/i/${imageSlug}/original`;
             window.editorModal.open(imageUrl);
         }
+
+        // Apply edit handler for editor modal
+        document.getElementById('applyEdit')?.addEventListener('click', async () => {
+            if (!window.editorModal || !currentEditingSlug) return;
+
+            const canvas = window.editorModal.getCroppedCanvas();
+            if (!canvas) {
+                alert('Brak edycji do zastosowania');
+                return;
+            }
+
+            showLoading();
+
+            canvas.toBlob(async (blob) => {
+                const formData = new FormData();
+                formData.append('file', blob, 'edited.jpg');
+
+                try {
+                    const res = await fetch(`/i/${currentEditingSlug}/edit`, {
+                        method: 'POST',
+                        headers: { 'X-Edit-Token': editToken },
+                        body: formData
+                    });
+
+                    if (res.ok) {
+                        // Update thumbnail in gallery
+                        const item = document.querySelector(`.gallery-item[data-slug="${currentEditingSlug}"]`);
+                        if (item) {
+                            const img = item.querySelector('img');
+                            if (img) {
+                                img.src = `${baseURL}/i/${currentEditingSlug}/200?t=${Date.now()}`;
+                            }
+                            // Update lightbox entry
+                            const idx = images.findIndex(i => i.link.closest('.gallery-item')?.dataset.slug === currentEditingSlug);
+                            if (idx >= 0) {
+                                images[idx].full = `${baseURL}/i/${currentEditingSlug}/1920?t=${Date.now()}`;
+                            }
+                        }
+                        window.editorModal.close();
+                    } else {
+                        alert('Błąd zastosowania edycji');
+                    }
+                } catch (err) {
+                    alert('Błąd połączenia: ' + err.message);
+                } finally {
+                    hideLoading();
+                    currentEditingSlug = null;
+                }
+            }, 'image/jpeg', 0.95);
+        });
 
         // Add images
         addFiles.addEventListener('change', async () => {
@@ -859,7 +917,7 @@
                         if (xhr.status === 200) {
                             try {
                                 const result = JSON.parse(xhr.responseText);
-                                addImagesToGallery(result.images || []);
+                                addImagesToGallery(result.added || []);
                             } catch (e) {
                                 alert('Błąd parsowania odpowiedzi');
                             }

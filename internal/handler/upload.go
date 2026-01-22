@@ -226,14 +226,14 @@ func (h *UploadHandler) ServeOriginal(w http.ResponseWriter, r *http.Request, sl
 }
 
 type ImageViewHandler struct {
-	db      *storage.DB
-	tmpl    *template.Template
-	baseURL string
+	db   *storage.DB
+	tmpl *template.Template
+	cfg  *config.Config
 }
 
-func NewImageViewHandler(db *storage.DB, baseURL string) *ImageViewHandler {
+func NewImageViewHandler(db *storage.DB, cfg *config.Config) *ImageViewHandler {
 	tmpl := template.Must(template.ParseFS(templates, "templates/image.html", "templates/partials/*.html"))
-	return &ImageViewHandler{db: db, tmpl: tmpl, baseURL: baseURL}
+	return &ImageViewHandler{db: db, tmpl: tmpl, cfg: cfg}
 }
 
 func (h *ImageViewHandler) ServeHTTP(w http.ResponseWriter, r *http.Request, slug string) {
@@ -251,9 +251,10 @@ func (h *ImageViewHandler) ServeHTTP(w http.ResponseWriter, r *http.Request, slu
 	editToken := r.URL.Query().Get("edit")
 	editMode := editToken != "" && img.EditToken != "" && editToken == img.EditToken
 
+	baseURL := getBaseURL(h.cfg, r)
 	data := map[string]interface{}{
 		"Image":     img,
-		"BaseURL":   h.baseURL,
+		"BaseURL":   baseURL,
 		"CanEdit":   canEdit,
 		"EditToken": editToken,
 		"EditMode":  editMode,
@@ -284,8 +285,33 @@ func (h *ImageEditHandler) ServeHTTP(w http.ResponseWriter, r *http.Request, slu
 		return
 	}
 
+	// Check authorization: user owns image OR valid edit token
+	authorized := false
 	user := middleware.GetUser(r)
-	if user == nil || img.UserID == nil || user.ID != *img.UserID {
+	if user != nil && img.UserID != nil && user.ID == *img.UserID {
+		authorized = true
+	}
+
+	// Check edit token from header or query param
+	if !authorized {
+		editToken := r.Header.Get("X-Edit-Token")
+		if editToken == "" {
+			editToken = r.URL.Query().Get("edit")
+		}
+		// Accept image's own edit token
+		if editToken != "" && img.EditToken != "" && editToken == img.EditToken {
+			authorized = true
+		}
+		// Accept gallery's edit token if image belongs to gallery
+		if !authorized && editToken != "" && img.GalleryID != nil {
+			gallery, err := h.db.GetGalleryByID(*img.GalleryID)
+			if err == nil && gallery != nil && gallery.EditToken == editToken {
+				authorized = true
+			}
+		}
+	}
+
+	if !authorized {
 		http.Error(w, "Forbidden", 403)
 		return
 	}

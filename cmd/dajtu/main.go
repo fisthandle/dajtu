@@ -61,7 +61,7 @@ func main() {
 
 	bratUploadHandler := handler.NewBratUploadHandler(cfg, db, fs, authHandler.GetDecoder(), processor)
 
-	imageViewHandler := handler.NewImageViewHandler(db, cfg.BaseURL)
+	imageViewHandler := handler.NewImageViewHandler(db, cfg)
 
 	editImageTmpl := template.Must(template.ParseFiles("internal/handler/templates/edit_image.html"))
 	imageEditHandler := handler.NewImageEditHandler(db, fs, editImageTmpl, processor, cfg)
