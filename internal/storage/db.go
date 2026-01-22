@@ -778,3 +778,9 @@ func (db *DB) UpdateImageMetadata(slug string, width, height int, fileSize int64
 		width, height, fileSize, slug)
 	return err
 }
+
+func (db *DB) UpdateGalleryTitle(id int64, title string) error {
+	_, err := db.conn.Exec("UPDATE galleries SET title = ?, updated_at = ? WHERE id = ?",
+		title, time.Now().Unix(), id)
+	return err
+}

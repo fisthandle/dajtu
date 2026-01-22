@@ -204,11 +204,6 @@
             font: inherit;
         }
         .user-info button:hover { color: #888; }
-        .editor-container {
-            margin-top: 20px;
-            display: none;
-        }
-        .editor-container.active { display: block; }
         .editor-toolbar {
             display: flex;
             gap: 8px;
@@ -270,6 +265,37 @@
         .cropper-face {
             background-color: rgba(74, 158, 255, 0.08);
         }
+        .editor-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .editor-modal.active {
+            display: flex;
+        }
+        .editor-modal-content {
+            width: 80%;
+            max-width: 1200px;
+            max-height: 90vh;
+            background: #1a1a1a;
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        .editor-modal-content .editor-toolbar {
+            margin-bottom: 15px;
+        }
+        .editor-modal-content .editor-canvas-wrap {
+            flex: 1;
+            max-height: calc(90vh - 150px);
+            overflow: hidden;
+        }
     </style>
 </head>
 <body>
@@ -297,42 +323,40 @@
                 <div class="preview" id="preview"></div>
             </div>
 
-            <div class="editor-container" id="editorContainer">
-                <div class="editor-toolbar">
-                    <button type="button" id="editorUndo" disabled title="Cofnij (Ctrl+Z)">↶ Cofnij</button>
-                    <button type="button" id="editorRedo" disabled title="Ponów (Ctrl+Y)">↷ Ponów</button>
-                    <div class="separator"></div>
-                    <div class="group">
-                        <button type="button" id="editorRotateL" title="Obróć -90°">↺</button>
-                        <button type="button" id="editorRotateR" title="Obróć +90°">↻</button>
-                        <button type="button" id="editorFlipH" title="Odbij poziomo">⇆</button>
-                        <button type="button" id="editorFlipV" title="Odbij pionowo">⇅</button>
+            <div class="editor-modal" id="editorModal">
+                <div class="editor-modal-content">
+                    <div class="editor-toolbar">
+                        <button type="button" id="editorUndo" disabled title="Cofnij (Ctrl+Z)">↶ Cofnij</button>
+                        <button type="button" id="editorRedo" disabled title="Ponów (Ctrl+Y)">↷ Ponów</button>
+                        <div class="separator"></div>
+                        <div class="group">
+                            <button type="button" id="editorRotateL" title="Obróć -90°">↺</button>
+                            <button type="button" id="editorRotateR" title="Obróć +90°">↻</button>
+                            <button type="button" id="editorFlipH" title="Odbij poziomo">⇆</button>
+                            <button type="button" id="editorFlipV" title="Odbij pionowo">⇅</button>
+                        </div>
+                        <div class="separator"></div>
+                        <div class="group">
+                            <button type="button" id="aspectFree" class="active">Free</button>
+                            <button type="button" id="aspect1x1">1:1</button>
+                            <button type="button" id="aspect16x9">16:9</button>
+                            <button type="button" id="aspect4x3">4:3</button>
+                            <button type="button" id="aspect9x16">9:16</button>
+                            <button type="button" id="aspect3x4">3:4</button>
+                        </div>
+                        <div class="separator"></div>
+                        <button type="button" id="editorReset" title="Resetuj wszystko">⟲ Reset</button>
+                        <div class="separator"></div>
+                        <button type="button" id="applyEdit" style="background: #4a9eff; color: white;">✓ Zastosuj</button>
+                        <button type="button" id="cancelEdit">✕ Anuluj</button>
                     </div>
-                    <div class="separator"></div>
-                    <div class="group">
-                        <button type="button" id="aspectFree" class="active">Free</button>
-                        <button type="button" id="aspect1x1">1:1</button>
-                        <button type="button" id="aspect16x9">16:9</button>
-                        <button type="button" id="aspect4x3">4:3</button>
+                    <div class="editor-canvas-wrap" id="editorCanvasWrap">
+                        <img id="editorImage" src="" alt="Edit">
                     </div>
-                    <div class="separator"></div>
-                    <button type="button" id="editorReset" title="Resetuj wszystko">⟲ Reset</button>
-                    <div class="separator"></div>
-                    <button type="button" id="applyEdit" style="background: #4a9eff; color: white;">✓ Zastosuj</button>
-                    <button type="button" id="cancelEdit">✕ Anuluj</button>
+                    <div class="editor-info" id="editorInfo"></div>
                 </div>
-                <div class="editor-canvas-wrap" id="editorCanvasWrap">
-                    <img id="editorImage" src="" alt="Edit">
-                </div>
-                <div class="editor-info" id="editorInfo"></div>
             </div>
 
-            <div class="options">
-                <div class="option">
-                    <label for="title">Tytuł galerii (opcjonalnie)</label>
-                    <input type="text" name="title" id="title" placeholder="Moja galeria">
-                </div>
-            </div>
 
             <button type="submit" class="btn" id="submitBtn" disabled>
                 Wyślij
@@ -357,8 +381,7 @@
         const preview = document.getElementById('preview');
         const submitBtn = document.getElementById('submitBtn');
         const result = document.getElementById('result');
-        const titleInput = document.getElementById('title');
-        const editorContainer = document.getElementById('editorContainer');
+        const editorModal = document.getElementById('editorModal');
         const editorImage = document.getElementById('editorImage');
         const editorInfo = document.getElementById('editorInfo');
         const editorUndo = document.getElementById('editorUndo');
@@ -373,12 +396,15 @@
         let editedFiles = {};
         let currentEditIndex = null;
         let originalFileData = {};
+        let selectedFiles = [];  // Persystentna lista plików
 
         const aspectButtons = [
             { id: 'aspectFree', ratio: NaN },
             { id: 'aspect1x1', ratio: 1 },
             { id: 'aspect16x9', ratio: 16 / 9 },
-            { id: 'aspect4x3', ratio: 4 / 3 }
+            { id: 'aspect4x3', ratio: 4 / 3 },
+            { id: 'aspect9x16', ratio: 9 / 16 },
+            { id: 'aspect3x4', ratio: 3 / 4 }
         ];
 
         function isSameRatio(a, b) {
@@ -457,7 +483,7 @@
             currentAspectRatio = NaN;
             updateAspectButtons();
             updateUndoRedo();
-            editorContainer.classList.remove('active');
+            editorModal.classList.remove('active');
             editorImage.removeAttribute('src');
             editorInfo.textContent = '';
         }
@@ -478,7 +504,7 @@
                     checkOrientation: true,
                     ready() {
                         console.log('Cropper ready!');
-                        editorContainer.classList.add('active');
+                        editorModal.classList.add('active');
                         setAspectRatio(NaN);
                         saveState();
                         updateEditorUI();
@@ -493,18 +519,13 @@
         }
 
         function updateEditorVisibility() {
-            const files = fileInput.files;
-            const hasSingle = files.length === 1 && !titleInput.value.trim();
-            if (!hasSingle) {
-                destroyEditor();
-                return;
-            }
-            initEditor(files[0]);
+            // Modal edytora jest otwierany ręcznie przez przycisk edit
+            // Nie otwieramy go automatycznie
         }
 
         function openEditorForFile(index) {
             currentEditIndex = index;
-            const file = fileInput.files[index];
+            const file = selectedFiles[index];
 
             if (!originalFileData[index]) {
                 const reader = new FileReader();
@@ -529,7 +550,7 @@
                     responsive: true,
                     checkOrientation: true,
                     ready() {
-                        editorContainer.classList.add('active');
+                        editorModal.classList.add('active');
                         setAspectRatio(NaN);
                         saveState();
                         updateEditorUI();
@@ -542,7 +563,7 @@
         }
 
         function closeEditor() {
-            editorContainer.classList.remove('active');
+            editorModal.classList.remove('active');
             currentEditIndex = null;
             if (cropper) {
                 cropper.destroy();
@@ -615,23 +636,24 @@
             });
         });
         dropArea.addEventListener('drop', e => {
-            fileInput.files = e.dataTransfer.files;
-            updatePreview();
+            addFiles(e.dataTransfer.files);
         });
         dropArea.addEventListener('click', () => fileInput.click());
-        fileInput.addEventListener('change', updatePreview);
-        titleInput.addEventListener('input', updateEditorVisibility);
+        fileInput.addEventListener('change', () => {
+            addFiles(fileInput.files);
+            fileInput.value = '';  // Reset input po dodaniu
+        });
 
-        function removeFile(index) {
-            const dt = new DataTransfer();
-            const files = fileInput.files;
-
-            for (let i = 0; i < files.length; i++) {
-                if (i !== index) {
-                    dt.items.add(files[i]);
+        function addFiles(files) {
+            for (const file of files) {
+                if (file.type.startsWith('image/')) {
+                    selectedFiles.push(file);
                 }
             }
+            updatePreview();
+        }
 
+        function removeFile(index) {
             // Usuń edytowane dane dla tego pliku
             if (editedFiles[index]) {
                 delete editedFiles[index];
@@ -639,6 +661,10 @@
             if (originalFileData[index]) {
                 delete originalFileData[index];
             }
+
+            // Usuń plik z tablicy
+            selectedFiles.splice(index, 1);
+
             // Przeindeksuj editedFiles i originalFileData
             const newEditedFiles = {};
             const newOriginalFileData = {};
@@ -646,7 +672,7 @@
                 const oldIndex = parseInt(key);
                 if (oldIndex > index) {
                     newEditedFiles[oldIndex - 1] = editedFiles[key];
-                } else {
+                } else if (oldIndex < index) {
                     newEditedFiles[key] = editedFiles[key];
                 }
             });
@@ -654,23 +680,21 @@
                 const oldIndex = parseInt(key);
                 if (oldIndex > index) {
                     newOriginalFileData[oldIndex - 1] = originalFileData[key];
-                } else {
+                } else if (oldIndex < index) {
                     newOriginalFileData[key] = originalFileData[key];
                 }
             });
             editedFiles = newEditedFiles;
             originalFileData = newOriginalFileData;
 
-            fileInput.files = dt.files;
             updatePreview();
         }
 
         function updatePreview() {
             preview.innerHTML = '';
-            const files = fileInput.files;
-            submitBtn.disabled = files.length === 0;
+            submitBtn.disabled = selectedFiles.length === 0;
 
-            Array.from(files).forEach((file, index) => {
+            selectedFiles.forEach((file, index) => {
                 const item = document.createElement('div');
                 item.className = 'preview-item';
                 item.dataset.index = index;
@@ -712,11 +736,35 @@
         document.getElementById('editorRotateL').addEventListener('click', () => {
             if (!cropper) return;
             cropper.rotate(-90);
+            // Po rotacji: jeśli aspect ratio jest free, rozciągnij na cały obrazek
+            if (Number.isNaN(currentAspectRatio)) {
+                setTimeout(() => {
+                    const canvasData = cropper.getCanvasData();
+                    cropper.setCropBoxData({
+                        left: canvasData.left,
+                        top: canvasData.top,
+                        width: canvasData.width,
+                        height: canvasData.height
+                    });
+                }, 50);
+            }
             saveState();
         });
         document.getElementById('editorRotateR').addEventListener('click', () => {
             if (!cropper) return;
             cropper.rotate(90);
+            // Po rotacji: jeśli aspect ratio jest free, rozciągnij na cały obrazek
+            if (Number.isNaN(currentAspectRatio)) {
+                setTimeout(() => {
+                    const canvasData = cropper.getCanvasData();
+                    cropper.setCropBoxData({
+                        left: canvasData.left,
+                        top: canvasData.top,
+                        width: canvasData.width,
+                        height: canvasData.height
+                    });
+                }, 50);
+            }
             saveState();
         });
         document.getElementById('editorFlipH').addEventListener('click', () => {
@@ -770,7 +818,16 @@
         });
 
         document.addEventListener('keydown', (e) => {
-            if (!cropper || !editorContainer.classList.contains('active')) return;
+            if (!editorModal.classList.contains('active')) return;
+
+            // ESC zamyka modal
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                closeEditor();
+                return;
+            }
+
+            if (!cropper) return;
             const activeTag = document.activeElement && document.activeElement.tagName;
             if (activeTag === 'INPUT' || activeTag === 'TEXTAREA') return;
             if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
@@ -783,34 +840,35 @@
             }
         });
 
+        // Zamknij modal na klik poza content
+        editorModal.addEventListener('click', (e) => {
+            if (e.target === editorModal) {
+                closeEditor();
+            }
+        });
+
         form.addEventListener('submit', async e => {
             e.preventDefault();
             submitBtn.disabled = true;
             submitBtn.textContent = 'Wysyłanie...';
 
             const formData = new FormData();
-            const files = fileInput.files;
-            const title = titleInput.value.trim();
-            const isSingleUpload = files.length === 1 && !title;
-
-            if (title) {
-                formData.append('title', title);
-            }
+            const isSingleUpload = selectedFiles.length === 1;
 
             if (isSingleUpload) {
                 // Single file - use 'file' parameter
                 if (editedFiles[0] && editedFiles[0].blob) {
-                    formData.append('file', editedFiles[0].blob, files[0].name);
+                    formData.append('file', editedFiles[0].blob, selectedFiles[0].name);
                 } else {
-                    formData.append('file', files[0]);
+                    formData.append('file', selectedFiles[0]);
                 }
             } else {
                 // Gallery - use 'files' parameter
-                for (let i = 0; i < files.length; i++) {
+                for (let i = 0; i < selectedFiles.length; i++) {
                     if (editedFiles[i] && editedFiles[i].blob) {
-                        formData.append('files', editedFiles[i].blob, files[i].name);
+                        formData.append('files', editedFiles[i].blob, selectedFiles[i].name);
                     } else {
-                        formData.append('files', files[i]);
+                        formData.append('files', selectedFiles[i]);
                     }
                 }
             }

@@ -441,3 +441,75 @@ func TestGalleryHandler_GenerateUniqueSlug(t *testing.T) {
 		t.Errorf("slug length = %d, want 4", len(slug))
 	}
 }
+
+func TestGalleryHandler_UpdateTitle(t *testing.T) {
+	cfg, db, fs, cleanup := testSetup(t)
+	defer cleanup()
+
+	h := NewGalleryHandler(cfg, db, fs)
+
+	now := time.Now().Unix()
+	g := &storage.Gallery{
+		Slug:      "title1",
+		EditToken: "secret",
+		Title:     "Old Title",
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+	db.InsertGallery(g)
+
+	var buf bytes.Buffer
+	writer := multipart.NewWriter(&buf)
+	writer.WriteField("title", "New Title")
+	writer.Close()
+
+	req := httptest.NewRequest("POST", "/gallery/title1/title", &buf)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	req.Header.Set("X-Edit-Token", "secret")
+	rec := httptest.NewRecorder()
+
+	h.UpdateTitle(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
+
+	// Verify title was updated
+	updated, _ := db.GetGalleryBySlug("title1")
+	if updated.Title != "New Title" {
+		t.Errorf("title = %q, want %q", updated.Title, "New Title")
+	}
+}
+
+func TestGalleryHandler_UpdateTitle_InvalidToken(t *testing.T) {
+	cfg, db, fs, cleanup := testSetup(t)
+	defer cleanup()
+
+	h := NewGalleryHandler(cfg, db, fs)
+
+	now := time.Now().Unix()
+	g := &storage.Gallery{
+		Slug:      "title2",
+		EditToken: "correct",
+		Title:     "Original",
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+	db.InsertGallery(g)
+
+	var buf bytes.Buffer
+	writer := multipart.NewWriter(&buf)
+	writer.WriteField("title", "Hacked")
+	writer.Close()
+
+	req := httptest.NewRequest("POST", "/gallery/title2/title", &buf)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	req.Header.Set("X-Edit-Token", "wrong")
+	rec := httptest.NewRecorder()
+
+	h.UpdateTitle(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Errorf("status = %d, want %d", rec.Code, http.StatusForbidden)
+	}
+}

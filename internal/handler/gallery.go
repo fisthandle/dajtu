@@ -374,6 +374,53 @@ func (h *GalleryHandler) DeleteImage(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"deleted": imageSlug})
 }
 
+// POST /gallery/:slug/title - update gallery title
+func (h *GalleryHandler) UpdateTitle(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Extract gallery slug from path: /gallery/XXXX/title
+	path := strings.TrimPrefix(r.URL.Path, "/gallery/")
+	parts := strings.Split(path, "/")
+	if len(parts) != 2 || parts[1] != "title" {
+		http.NotFound(w, r)
+		return
+	}
+	gallerySlug := parts[0]
+
+	// Verify edit token
+	editToken := r.Header.Get("X-Edit-Token")
+	if editToken == "" {
+		editToken = r.FormValue("edit_token")
+	}
+
+	gallery, err := h.db.GetGalleryBySlug(gallerySlug)
+	if err != nil || gallery == nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	if gallery.EditToken != editToken {
+		jsonError(w, "invalid edit token", http.StatusForbidden)
+		return
+	}
+
+	if err := r.ParseMultipartForm(1024 * 1024); err != nil {
+		r.ParseForm()
+	}
+	newTitle := r.FormValue("title")
+
+	if err := h.db.UpdateGalleryTitle(gallery.ID, newTitle); err != nil {
+		jsonError(w, "database error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"title": newTitle})
+}
+
 // GET /g/:slug - view gallery
 func (h *GalleryHandler) View(w http.ResponseWriter, r *http.Request) {
 	gallerySlug := strings.TrimPrefix(r.URL.Path, "/g/")

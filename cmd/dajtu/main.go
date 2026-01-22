@@ -94,6 +94,8 @@ func main() {
 		path := strings.TrimPrefix(r.URL.Path, "/gallery/")
 		if strings.HasSuffix(path, "/add") {
 			galleryHandler.AddImages(w, r)
+		} else if strings.HasSuffix(path, "/title") {
+			galleryHandler.UpdateTitle(w, r)
 		} else if r.Method == http.MethodDelete {
 			galleryHandler.DeleteImage(w, r)
 		} else {

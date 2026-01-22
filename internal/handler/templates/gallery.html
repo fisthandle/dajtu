@@ -173,6 +173,33 @@
             margin-top: 10px;
         }
         .edit-mode .edit-status { display: block; }
+        .title-form {
+            display: none;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #333;
+            gap: 10px;
+        }
+        .edit-mode .title-form { display: flex; }
+        .title-form input {
+            flex: 1;
+            padding: 10px 12px;
+            border: 1px solid #333;
+            border-radius: 6px;
+            background: #222;
+            color: #fff;
+            font-size: 1rem;
+        }
+        .title-form input:focus { outline: none; border-color: #4a9eff; }
+        .title-form button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            background: #4a9eff;
+            color: #fff;
+            cursor: pointer;
+        }
+        .title-form button:hover { background: #3a8eef; }
         .pagination {
             display: flex;
             justify-content: center;
@@ -197,6 +224,10 @@
             <form class="token-form" id="tokenForm">
                 <input type="text" id="tokenInput" placeholder="Wklej edit token..." value="{{.EditToken}}">
                 <button type="submit">Odblokuj</button>
+            </form>
+            <form class="title-form" id="titleForm">
+                <input type="text" id="titleInput" placeholder="Tytuł galerii..." value="{{.Title}}">
+                <button type="submit">Zapisz tytuł</button>
             </form>
             <div class="add-form">
                 <label>
@@ -244,6 +275,8 @@
         const container = document.querySelector('.container');
         const tokenForm = document.getElementById('tokenForm');
         const tokenInput = document.getElementById('tokenInput');
+        const titleForm = document.getElementById('titleForm');
+        const titleInput = document.getElementById('titleInput');
         const addFiles = document.getElementById('addFiles');
         const gallery = document.getElementById('gallery');
         const lightbox = document.getElementById('lightbox');
@@ -275,6 +308,37 @@
             e.preventDefault();
             if (tokenInput.value.trim()) {
                 enableEditMode();
+            }
+        });
+
+        titleForm.addEventListener('submit', async e => {
+            e.preventDefault();
+            const token = tokenInput.value;
+            const newTitle = titleInput.value;
+
+            const formData = new FormData();
+            formData.append('title', newTitle);
+
+            const res = await fetch(`/gallery/${gallerySlug}/title`, {
+                method: 'POST',
+                headers: { 'X-Edit-Token': token },
+                body: formData
+            });
+
+            if (res.ok) {
+                // Update h1 if exists
+                const h1 = document.querySelector('h1');
+                if (h1) {
+                    h1.textContent = newTitle || 'Galeria';
+                    if (!newTitle) h1.remove();
+                } else if (newTitle) {
+                    const newH1 = document.createElement('h1');
+                    newH1.textContent = newTitle;
+                    container.insertBefore(newH1, container.firstChild);
+                }
+            } else {
+                const data = await res.json();
+                alert('Błąd: ' + (data.error || 'Nieznany błąd'));
             }
         });
 
