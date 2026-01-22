@@ -11,6 +11,7 @@ import (
 	"dajtu/internal/cleanup"
 	"dajtu/internal/config"
 	"dajtu/internal/handler"
+	"dajtu/internal/image"
 	"dajtu/internal/middleware"
 	"dajtu/internal/storage"
 )
@@ -44,7 +45,9 @@ func main() {
 	cleanupDaemon := cleanup.NewDaemon(cfg, db, fs)
 	cleanupDaemon.Start()
 
-	uploadHandler := handler.NewUploadHandler(cfg, db, fs)
+	processor := image.NewProcessor()
+
+	uploadHandler := handler.NewUploadHandler(cfg, db, fs, processor)
 	galleryHandler := handler.NewGalleryHandler(cfg, db, fs)
 	authHandler, err := handler.NewAuthHandler(cfg, db)
 	if err != nil {
@@ -56,13 +59,13 @@ func main() {
 	adminHandler := handler.NewAdminHandler(db, fs)
 	adminMiddleware := middleware.NewAdminMiddleware(cfg.AdminNicks)
 
-	bratUploadHandler := handler.NewBratUploadHandler(cfg, db, fs, authHandler.GetDecoder())
+	bratUploadHandler := handler.NewBratUploadHandler(cfg, db, fs, authHandler.GetDecoder(), processor)
 
 	imageViewTmpl := template.Must(template.ParseFiles("internal/handler/templates/image.html"))
 	imageViewHandler := handler.NewImageViewHandler(db, imageViewTmpl, cfg.BaseURL)
 
 	editImageTmpl := template.Must(template.ParseFiles("internal/handler/templates/edit_image.html"))
-	imageEditHandler := handler.NewImageEditHandler(db, fs, editImageTmpl, cfg)
+	imageEditHandler := handler.NewImageEditHandler(db, fs, editImageTmpl, processor, cfg)
 
 	mux := http.NewServeMux()
 

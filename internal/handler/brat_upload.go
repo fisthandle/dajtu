@@ -15,14 +15,15 @@ import (
 )
 
 type BratUploadHandler struct {
-	cfg     *config.Config
-	db      *storage.DB
-	fs      *storage.Filesystem
-	decoder *auth.BratDecoder
+	cfg       *config.Config
+	db        *storage.DB
+	fs        *storage.Filesystem
+	decoder   *auth.BratDecoder
+	processor *image.Processor
 }
 
-func NewBratUploadHandler(cfg *config.Config, db *storage.DB, fs *storage.Filesystem, decoder *auth.BratDecoder) *BratUploadHandler {
-	return &BratUploadHandler{cfg: cfg, db: db, fs: fs, decoder: decoder}
+func NewBratUploadHandler(cfg *config.Config, db *storage.DB, fs *storage.Filesystem, decoder *auth.BratDecoder, processor *image.Processor) *BratUploadHandler {
+	return &BratUploadHandler{cfg: cfg, db: db, fs: fs, decoder: decoder, processor: processor}
 }
 
 type BratUploadResponse struct {
@@ -140,7 +141,7 @@ func (h *BratUploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	results, err := image.Process(data)
+	results, err := h.processor.ProcessWithTransform(data, image.TransformParams{})
 	if err != nil {
 		log.Printf("process error: %v", err)
 		h.fs.Delete(slug)

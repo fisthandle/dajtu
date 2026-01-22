@@ -16,13 +16,14 @@ import (
 )
 
 type UploadHandler struct {
-	cfg *config.Config
-	db  *storage.DB
-	fs  *storage.Filesystem
+	cfg       *config.Config
+	db        *storage.DB
+	fs        *storage.Filesystem
+	processor *image.Processor
 }
 
-func NewUploadHandler(cfg *config.Config, db *storage.DB, fs *storage.Filesystem) *UploadHandler {
-	return &UploadHandler{cfg: cfg, db: db, fs: fs}
+func NewUploadHandler(cfg *config.Config, db *storage.DB, fs *storage.Filesystem, processor *image.Processor) *UploadHandler {
+	return &UploadHandler{cfg: cfg, db: db, fs: fs, processor: processor}
 }
 
 type UploadResponse struct {
@@ -133,12 +134,7 @@ func (h *UploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Process image (re-encode + resize)
 	transformParams := parseTransformParams(r)
-	var results []image.ProcessResult
-	if transformParams.HasTransforms() {
-		results, err = image.ProcessWithTransform(data, transformParams)
-	} else {
-		results, err = image.Process(data)
-	}
+	results, err := h.processor.ProcessWithTransform(data, transformParams)
 	if err != nil {
 		log.Printf("process error: %v", err)
 		h.fs.Delete(slug)
@@ -247,14 +243,15 @@ func (h *ImageViewHandler) ServeHTTP(w http.ResponseWriter, r *http.Request, slu
 }
 
 type ImageEditHandler struct {
-	db   *storage.DB
-	fs   *storage.Filesystem
-	tmpl *template.Template
-	cfg  *config.Config
+	db        *storage.DB
+	fs        *storage.Filesystem
+	tmpl      *template.Template
+	processor *image.Processor
+	cfg       *config.Config
 }
 
-func NewImageEditHandler(db *storage.DB, fs *storage.Filesystem, tmpl *template.Template, cfg *config.Config) *ImageEditHandler {
-	return &ImageEditHandler{db: db, fs: fs, tmpl: tmpl, cfg: cfg}
+func NewImageEditHandler(db *storage.DB, fs *storage.Filesystem, tmpl *template.Template, processor *image.Processor, cfg *config.Config) *ImageEditHandler {
+	return &ImageEditHandler{db: db, fs: fs, tmpl: tmpl, processor: processor, cfg: cfg}
 }
 
 func (h *ImageEditHandler) ServeHTTP(w http.ResponseWriter, r *http.Request, slug string) {
@@ -297,12 +294,7 @@ func (h *ImageEditHandler) ServeHTTP(w http.ResponseWriter, r *http.Request, slu
 		newSlug := h.db.GenerateUniqueSlug("images", 5)
 
 		transformParams := parseTransformParams(r)
-		var results []image.ProcessResult
-		if transformParams.HasTransforms() {
-			results, err = image.ProcessWithTransform(data, transformParams)
-		} else {
-			results, err = image.Process(data)
-		}
+		results, err := h.processor.ProcessWithTransform(data, transformParams)
 		if err != nil {
 			http.Error(w, "Process error", 500)
 			return
@@ -349,12 +341,7 @@ func (h *ImageEditHandler) ServeHTTP(w http.ResponseWriter, r *http.Request, slu
 	}
 
 	transformParams := parseTransformParams(r)
-	var results []image.ProcessResult
-	if transformParams.HasTransforms() {
-		results, err = image.ProcessWithTransform(data, transformParams)
-	} else {
-		results, err = image.Process(data)
-	}
+	results, err := h.processor.ProcessWithTransform(data, transformParams)
 	if err != nil {
 		http.Error(w, "Process error", 500)
 		return

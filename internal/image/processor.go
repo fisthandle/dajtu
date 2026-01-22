@@ -42,11 +42,17 @@ func (p TransformParams) HasTransforms() bool {
 	return p.Rotation != 0 || p.FlipH || p.FlipV || (p.CropW > 0 && p.CropH > 0)
 }
 
+type Processor struct{}
+
+func NewProcessor() *Processor {
+	return &Processor{}
+}
+
 func Process(data []byte) ([]ProcessResult, error) {
 	return processVariants(data, false)
 }
 
-func ProcessWithTransform(data []byte, params TransformParams) ([]ProcessResult, error) {
+func (p *Processor) ProcessWithTransform(data []byte, params TransformParams) ([]ProcessResult, error) {
 	if !params.HasTransforms() {
 		return Process(data)
 	}
