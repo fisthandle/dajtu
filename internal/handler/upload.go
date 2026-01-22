@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"dajtu/internal/config"
@@ -34,6 +35,42 @@ var extToMime = map[string]string{
 	".gif":  "image/gif",
 	".webp": "image/webp",
 	".avif": "image/avif",
+}
+
+func parseTransformParams(r *http.Request) image.TransformParams {
+	params := image.TransformParams{}
+
+	if rot := r.FormValue("rotation"); rot != "" {
+		if value, err := strconv.Atoi(rot); err == nil {
+			params.Rotation = value
+		}
+	}
+
+	params.FlipH = r.FormValue("flipH") == "true"
+	params.FlipV = r.FormValue("flipV") == "true"
+
+	if v := r.FormValue("cropX"); v != "" {
+		if value, err := strconv.Atoi(v); err == nil {
+			params.CropX = value
+		}
+	}
+	if v := r.FormValue("cropY"); v != "" {
+		if value, err := strconv.Atoi(v); err == nil {
+			params.CropY = value
+		}
+	}
+	if v := r.FormValue("cropW"); v != "" {
+		if value, err := strconv.Atoi(v); err == nil {
+			params.CropW = value
+		}
+	}
+	if v := r.FormValue("cropH"); v != "" {
+		if value, err := strconv.Atoi(v); err == nil {
+			params.CropH = value
+		}
+	}
+
+	return params
 }
 
 func (h *UploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -93,7 +130,13 @@ func (h *UploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Process image (re-encode + resize)
-	results, err := image.Process(data)
+	transformParams := parseTransformParams(r)
+	var results []image.ProcessResult
+	if transformParams.HasTransforms() {
+		results, err = image.ProcessWithTransform(data, transformParams)
+	} else {
+		results, err = image.Process(data)
+	}
 	if err != nil {
 		log.Printf("process error: %v", err)
 		h.fs.Delete(slug)

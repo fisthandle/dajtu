@@ -28,7 +28,82 @@ type ProcessResult struct {
 	Height int
 }
 
+type TransformParams struct {
+	Rotation int
+	FlipH    bool
+	FlipV    bool
+	CropX    int
+	CropY    int
+	CropW    int
+	CropH    int
+}
+
+func (p TransformParams) HasTransforms() bool {
+	return p.Rotation != 0 || p.FlipH || p.FlipV || (p.CropW > 0 && p.CropH > 0)
+}
+
 func Process(data []byte) ([]ProcessResult, error) {
+	return processVariants(data, false)
+}
+
+func ProcessWithTransform(data []byte, params TransformParams) ([]ProcessResult, error) {
+	if !params.HasTransforms() {
+		return Process(data)
+	}
+
+	opts := bimg.Options{
+		StripMetadata: true,
+	}
+
+	rotation := ((params.Rotation % 360) + 360) % 360
+	switch rotation {
+	case 90:
+		opts.Rotate = bimg.D90
+	case 180:
+		opts.Rotate = bimg.D180
+	case 270:
+		opts.Rotate = bimg.D270
+	}
+
+	if params.FlipH {
+		opts.Flip = true
+	}
+	if params.FlipV {
+		opts.Flop = true
+	}
+
+	cropX := params.CropX
+	cropY := params.CropY
+	cropW := params.CropW
+	cropH := params.CropH
+	if cropX < 0 {
+		cropX = 0
+	}
+	if cropY < 0 {
+		cropY = 0
+	}
+	if cropW < 0 {
+		cropW = 0
+	}
+	if cropH < 0 {
+		cropH = 0
+	}
+	if cropW > 0 && cropH > 0 {
+		opts.Top = cropY
+		opts.Left = cropX
+		opts.AreaWidth = cropW
+		opts.AreaHeight = cropH
+	}
+
+	transformed, err := bimg.NewImage(data).Process(opts)
+	if err != nil {
+		return nil, fmt.Errorf("transform: %w", err)
+	}
+
+	return processVariants(transformed, true)
+}
+
+func processVariants(data []byte, noAutoRotate bool) ([]ProcessResult, error) {
 	img := bimg.NewImage(data)
 
 	// Get original dimensions
@@ -52,6 +127,7 @@ func Process(data []byte) ([]ProcessResult, error) {
 			Type:          bimg.WEBP,
 			Quality:       s.Quality,
 			StripMetadata: true,
+			NoAutoRotate:  noAutoRotate,
 		}
 
 		if s.Height > 0 {
