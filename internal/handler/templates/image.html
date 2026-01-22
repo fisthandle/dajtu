@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Image.OriginalName}} - dajtu</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: #111;
+            color: #fff;
+            min-height: 100vh;
+            padding: 1em;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 300;
+        }
+        .header h1 a {
+            color: #fff;
+            text-decoration: none;
+        }
+        .links-table {
+            max-width: 800px;
+            margin: 0 auto 30px;
+            background: #1a1a1a;
+            border-radius: 12px;
+            padding: 20px;
+        }
+        .links-table h2 {
+            font-size: 1rem;
+            margin-bottom: 15px;
+            color: #888;
+        }
+        .link-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #333;
+        }
+        .link-row:last-child {
+            border-bottom: none;
+        }
+        .link-row label {
+            color: #888;
+            min-width: 100px;
+        }
+        .link-row input {
+            flex: 1;
+            background: #222;
+            border: 1px solid #333;
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin: 0 10px;
+            font-family: monospace;
+        }
+        .link-row button {
+            background: #333;
+            border: none;
+            color: #fff;
+            padding: 8px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .link-row button:hover {
+            background: #444;
+        }
+        .back-link {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .back-link a {
+            color: #2196F3;
+            text-decoration: none;
+            margin: 0 15px;
+        }
+        .image-container {
+            text-align: center;
+        }
+        .image-container img {
+            max-width: 100%;
+            max-height: 80vh;
+            border-radius: 8px;
+        }
+        .edit-btn {
+            display: inline-block;
+            background: #2196F3;
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 6px;
+            text-decoration: none;
+        }
+        .edit-btn:hover {
+            background: #1976D2;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1><a href="/">dajtu</a></h1>
+    </div>
+
+    <div class="links-table">
+        <h2>Linki do obrazka</h2>
+        <div class="link-row">
+            <label>Bezpośredni:</label>
+            <input type="text" readonly value="{{.BaseURL}}/i/{{.Image.Slug}}/original" onclick="this.select()">
+            <button onclick="copyLink(this)">Kopiuj</button>
+        </div>
+        <div class="link-row">
+            <label>1920px:</label>
+            <input type="text" readonly value="{{.BaseURL}}/i/{{.Image.Slug}}/1920" onclick="this.select()">
+            <button onclick="copyLink(this)">Kopiuj</button>
+        </div>
+        <div class="link-row">
+            <label>800px:</label>
+            <input type="text" readonly value="{{.BaseURL}}/i/{{.Image.Slug}}/800" onclick="this.select()">
+            <button onclick="copyLink(this)">Kopiuj</button>
+        </div>
+        <div class="link-row">
+            <label>Miniatura:</label>
+            <input type="text" readonly value="{{.BaseURL}}/i/{{.Image.Slug}}/thumb" onclick="this.select()">
+            <button onclick="copyLink(this)">Kopiuj</button>
+        </div>
+        <div class="link-row">
+            <label>BBCode:</label>
+            <input type="text" readonly value="[img]{{.BaseURL}}/i/{{.Image.Slug}}/original[/img]" onclick="this.select()">
+            <button onclick="copyLink(this)">Kopiuj</button>
+        </div>
+        <div class="link-row">
+            <label>HTML:</label>
+            <input type="text" readonly value='<img src="{{.BaseURL}}/i/{{.Image.Slug}}/original">' onclick="this.select()">
+            <button onclick="copyLink(this)">Kopiuj</button>
+        </div>
+    </div>
+
+    <div class="back-link">
+        <a href="/">← Wróć dodać kolejny</a>
+        {{if .CanEdit}}
+        <a href="/i/{{.Image.Slug}}/edit" class="edit-btn">✏️ Edytuj</a>
+        {{end}}
+    </div>
+
+    <div class="image-container">
+        <img src="/i/{{.Image.Slug}}/1920" alt="{{.Image.OriginalName}}">
+    </div>
+
+    <script>
+    function copyLink(btn) {
+        const input = btn.previousElementSibling;
+        input.select();
+        navigator.clipboard.writeText(input.value);
+        btn.textContent = 'Skopiowano!';
+        setTimeout(() => btn.textContent = 'Kopiuj', 2000);
+    }
+    </script>
+</body>
+</html>
