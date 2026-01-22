@@ -1,0 +1,422 @@
+{{/* Editor Modal - Shared Component */}}
+<link rel="stylesheet" href="https://unpkg.com/cropperjs@1.6.2/dist/cropper.min.css">
+<style>
+.editor-toolbar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+.editor-toolbar button {
+    padding: 8px 14px;
+    border: 1px solid #333;
+    border-radius: 6px;
+    background: #1a1a1a;
+    color: #fff;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: border-color 0.2s;
+}
+.editor-toolbar button:hover { border-color: #4a9eff; }
+.editor-toolbar button:disabled { opacity: 0.4; cursor: not-allowed; }
+.editor-toolbar button.active {
+    border-color: #4a9eff;
+    background: rgba(74, 158, 255, 0.1);
+}
+.editor-toolbar .separator {
+    width: 1px;
+    height: 24px;
+    background: #333;
+    margin: 0 4px;
+}
+.editor-toolbar .group {
+    display: flex;
+    gap: 4px;
+}
+.editor-canvas-wrap {
+    width: 100%;
+    max-width: 900px;
+    max-height: 600px;
+    background: #0a0a0a;
+    border-radius: 8px;
+    overflow: hidden;
+}
+.editor-canvas-wrap img {
+    display: block;
+    max-width: 100%;
+}
+.editor-info {
+    margin-top: 10px;
+    font-size: 0.85rem;
+    color: #666;
+}
+.cropper-view-box {
+    outline: 1px solid #4a9eff;
+    outline-color: #4a9eff;
+}
+.cropper-line,
+.cropper-point {
+    background-color: #4a9eff;
+}
+.cropper-face {
+    background-color: rgba(74, 158, 255, 0.08);
+}
+.editor-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: #111;
+    z-index: 1000;
+}
+.editor-modal.active {
+    display: flex;
+}
+.editor-modal-content {
+    width: 100%;
+    height: 100%;
+    background: #111;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+}
+.editor-modal-content .editor-toolbar {
+    margin-bottom: 10px;
+    flex-shrink: 0;
+}
+.editor-modal-content .editor-canvas-wrap {
+    flex: 1;
+    min-height: 0;
+    max-width: none;
+    max-height: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.editor-modal-content .cropper-container {
+    max-width: 95% !important;
+    max-height: 95% !important;
+}
+</style>
+
+<div class="editor-modal" id="editorModal">
+    <div class="editor-modal-content">
+        <div class="editor-toolbar">
+            <button type="button" id="editorUndo" disabled title="Cofnij (Ctrl+Z)">↶ Cofnij</button>
+            <button type="button" id="editorRedo" disabled title="Ponów (Ctrl+Y)">↷ Ponów</button>
+            <div class="separator"></div>
+            <div class="group">
+                <button type="button" id="editorRotateL" title="Obróć -90°">↺</button>
+                <button type="button" id="editorRotateR" title="Obróć +90°">↻</button>
+                <button type="button" id="editorFlipH" title="Odbij poziomo">⇆</button>
+                <button type="button" id="editorFlipV" title="Odbij pionowo">⇅</button>
+            </div>
+            <div class="separator"></div>
+            <div class="group">
+                <button type="button" id="aspectFree" class="active">Free</button>
+                <button type="button" id="aspect1x1">1:1</button>
+                <button type="button" id="aspect16x9">16:9</button>
+                <button type="button" id="aspect4x3">4:3</button>
+                <button type="button" id="aspect9x16">9:16</button>
+                <button type="button" id="aspect3x4">3:4</button>
+            </div>
+            <div class="separator"></div>
+            <button type="button" id="editorReset" title="Resetuj wszystko">⟲ Reset</button>
+            <div class="separator"></div>
+            <button type="button" id="applyEdit" style="background: #4a9eff; color: white;">✓ Zastosuj</button>
+            <button type="button" id="cancelEdit">✕ Anuluj</button>
+        </div>
+        <div class="editor-canvas-wrap" id="editorCanvasWrap">
+            <img id="editorImage" src="" alt="Edit">
+        </div>
+        <div class="editor-info" id="editorInfo"></div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/cropperjs@1.6.2/dist/cropper.min.js"></script>
+<script>
+// Editor Modal - Shared JavaScript
+(function() {
+    if (!document.getElementById('editorModal')) return;
+
+    const editorModal = document.getElementById('editorModal');
+    const editorImage = document.getElementById('editorImage');
+    const editorInfo = document.getElementById('editorInfo');
+    const editorUndo = document.getElementById('editorUndo');
+    const editorRedo = document.getElementById('editorRedo');
+
+    let cropper = null;
+    let historyStack = [];
+    let historyIndex = -1;
+    let currentAspectRatio = NaN;
+    let isRestoring = false;
+    let zoomTimer = null;
+
+    const aspectButtons = [
+        { id: 'aspectFree', ratio: NaN },
+        { id: 'aspect1x1', ratio: 1 },
+        { id: 'aspect16x9', ratio: 16 / 9 },
+        { id: 'aspect4x3', ratio: 4 / 3 },
+        { id: 'aspect9x16', ratio: 9 / 16 },
+        { id: 'aspect3x4', ratio: 3 / 4 }
+    ];
+
+    function isSameRatio(a, b) {
+        if (Number.isNaN(a) && Number.isNaN(b)) {
+            return true;
+        }
+        return a === b;
+    }
+
+    function updateAspectButtons() {
+        aspectButtons.forEach(({ id, ratio }) => {
+            const btn = document.getElementById(id);
+            if (btn) {
+                btn.classList.toggle('active', isSameRatio(ratio, currentAspectRatio));
+            }
+        });
+    }
+
+    function setAspectRatio(ratio) {
+        currentAspectRatio = ratio;
+        updateAspectButtons();
+        if (cropper) {
+            cropper.setAspectRatio(ratio);
+        }
+    }
+
+    function updateUndoRedo() {
+        editorUndo.disabled = historyIndex <= 0;
+        editorRedo.disabled = historyIndex < 0 || historyIndex >= historyStack.length - 1;
+    }
+
+    function updateEditorUI() {
+        if (!cropper) return;
+        const data = cropper.getData(true);
+        const w = Math.max(0, Math.round(data.width));
+        const h = Math.max(0, Math.round(data.height));
+        editorInfo.textContent = `Zaznaczenie: ${w} × ${h}px`;
+    }
+
+    function saveState() {
+        if (!cropper || isRestoring) return;
+        const state = {
+            data: cropper.getData(true),
+            aspectRatio: currentAspectRatio
+        };
+        const serialized = JSON.stringify(state);
+        if (historyIndex >= 0 && historyStack[historyIndex] === serialized) {
+            return;
+        }
+        historyStack = historyStack.slice(0, historyIndex + 1);
+        historyStack.push(serialized);
+        historyIndex = historyStack.length - 1;
+        updateUndoRedo();
+    }
+
+    function restoreState(index) {
+        if (!cropper || index < 0 || index >= historyStack.length) return;
+        const state = JSON.parse(historyStack[index]);
+        isRestoring = true;
+        setAspectRatio(state.aspectRatio);
+        cropper.setData(state.data);
+        isRestoring = false;
+        historyIndex = index;
+        updateUndoRedo();
+        updateEditorUI();
+    }
+
+    function destroyEditor() {
+        if (cropper) {
+            cropper.destroy();
+            cropper = null;
+        }
+        if (zoomTimer) {
+            clearTimeout(zoomTimer);
+            zoomTimer = null;
+        }
+        historyStack = [];
+        historyIndex = -1;
+        currentAspectRatio = NaN;
+        updateAspectButtons();
+        updateUndoRedo();
+        editorModal.classList.remove('active');
+        editorImage.removeAttribute('src');
+        editorInfo.textContent = '';
+    }
+
+    function openEditor(dataUrl) {
+        destroyEditor();
+        editorModal.classList.add('active');
+
+        requestAnimationFrame(() => {
+            const wrap = document.getElementById('editorCanvasWrap');
+            const availableW = wrap.clientWidth * 0.95;
+            const availableH = wrap.clientHeight * 0.95;
+
+            editorImage.style.maxWidth = availableW + 'px';
+            editorImage.style.maxHeight = availableH + 'px';
+
+            editorImage.src = dataUrl;
+            editorImage.onload = () => {
+                cropper = new Cropper(editorImage, {
+                    viewMode: 2,
+                    autoCropArea: 1,
+                    background: false,
+                    responsive: true,
+                    checkOrientation: true,
+                    minContainerWidth: availableW,
+                    minContainerHeight: availableH,
+                    ready() {
+                        setAspectRatio(NaN);
+                        saveState();
+                        updateEditorUI();
+                    },
+                    crop() {
+                        updateEditorUI();
+                    }
+                });
+            };
+        });
+    }
+
+    function closeEditor() {
+        editorModal.classList.remove('active');
+        if (cropper) {
+            cropper.destroy();
+            cropper = null;
+        }
+    }
+
+    function getCroppedCanvas(options) {
+        if (!cropper) return null;
+        return cropper.getCroppedCanvas(options || {
+            maxWidth: 4096,
+            maxHeight: 4096,
+            imageSmoothingEnabled: true,
+            imageSmoothingQuality: 'high'
+        });
+    }
+
+    function editorRotate(degrees) {
+        if (!cropper) return;
+        cropper.rotate(degrees);
+        if (Number.isNaN(currentAspectRatio)) {
+            setTimeout(() => {
+                const canvasData = cropper.getCanvasData();
+                cropper.setCropBoxData({
+                    left: canvasData.left,
+                    top: canvasData.top,
+                    width: canvasData.width,
+                    height: canvasData.height
+                });
+            }, 50);
+        }
+        saveState();
+    }
+
+    function editorFlip(axis) {
+        if (!cropper) return;
+        const data = cropper.getData();
+        if (axis === 'h') {
+            const scaleX = data.scaleX || 1;
+            cropper.scaleX(scaleX * -1);
+        } else if (axis === 'v') {
+            const scaleY = data.scaleY || 1;
+            cropper.scaleY(scaleY * -1);
+        }
+        saveState();
+    }
+
+    function editorReset() {
+        if (!cropper) return;
+        cropper.reset();
+        setAspectRatio(NaN);
+        saveState();
+    }
+
+    function editorUndo() {
+        restoreState(historyIndex - 1);
+    }
+
+    function editorRedo() {
+        restoreState(historyIndex + 1);
+    }
+
+    // Button event listeners
+    document.getElementById('editorRotateL')?.addEventListener('click', () => editorRotate(-90));
+    document.getElementById('editorRotateR')?.addEventListener('click', () => editorRotate(90));
+    document.getElementById('editorFlipH')?.addEventListener('click', () => editorFlip('h'));
+    document.getElementById('editorFlipV')?.addEventListener('click', () => editorFlip('v'));
+    document.getElementById('editorReset')?.addEventListener('click', editorReset);
+    editorUndo?.addEventListener('click', editorUndo);
+    editorRedo?.addEventListener('click', editorRedo);
+    document.getElementById('cancelEdit')?.addEventListener('click', closeEditor);
+    // Note: applyEdit handler should be set by parent template
+
+    aspectButtons.forEach(({ id, ratio }) => {
+        document.getElementById(id)?.addEventListener('click', () => {
+            if (!cropper) return;
+            setAspectRatio(ratio);
+            saveState();
+        });
+    });
+
+    editorImage.addEventListener('cropend', () => {
+        if (!cropper || isRestoring) return;
+        saveState();
+    });
+
+    editorImage.addEventListener('zoom', () => {
+        if (!cropper || isRestoring) return;
+        if (zoomTimer) {
+            clearTimeout(zoomTimer);
+        }
+        zoomTimer = setTimeout(() => {
+            zoomTimer = null;
+            saveState();
+        }, 250);
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (!editorModal.classList.contains('active')) return;
+
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            closeEditor();
+            return;
+        }
+
+        if (!cropper) return;
+        const activeTag = document.activeElement && document.activeElement.tagName;
+        if (activeTag === 'INPUT' || activeTag === 'TEXTAREA') return;
+        if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+            e.preventDefault();
+            editorUndo();
+        }
+        if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+            e.preventDefault();
+            editorRedo();
+        }
+    });
+
+    editorModal.addEventListener('click', (e) => {
+        if (e.target === editorModal) {
+            closeEditor();
+        }
+    });
+
+    // Export API for parent templates
+    window.editorModal = {
+        open: openEditor,
+        close: closeEditor,
+        getCroppedCanvas: getCroppedCanvas,
+        rotate: editorRotate,
+        flip: editorFlip,
+        reset: editorReset,
+        undo: editorUndo,
+        redo: editorRedo,
+        setAspectRatio: setAspectRatio
+    };
+})();
+</script>

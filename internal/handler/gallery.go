@@ -28,8 +28,8 @@ type GalleryHandler struct {
 }
 
 func NewGalleryHandler(cfg *config.Config, db *storage.DB, fs *storage.Filesystem) *GalleryHandler {
-	galleryTmpl := template.Must(template.ParseFS(templates, "templates/gallery.html"))
-	indexTmpl := template.Must(template.ParseFS(templates, "templates/index.html"))
+	galleryTmpl := template.Must(template.ParseFS(templates, "templates/gallery.html", "templates/partials/*.html"))
+	indexTmpl := template.Must(template.ParseFS(templates, "templates/index.html", "templates/partials/*.html"))
 	return &GalleryHandler{cfg: cfg, db: db, fs: fs, galleryTmpl: galleryTmpl, indexTmpl: indexTmpl}
 }
 

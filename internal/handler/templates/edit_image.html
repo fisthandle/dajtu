@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Edycja - {{.Image.OriginalName}}</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -18,39 +17,18 @@
         .header h1 { font-size: 2rem; font-weight: 300; }
         .header h1 a { color: #fff; text-decoration: none; }
 
-        .editor-container {
-            max-width: 90%;
+        .preview-container {
+            max-width: 1200px;
             margin: 0 auto;
+            text-align: center;
         }
-        .editor-image-wrapper {
-            max-height: 60vh;
-            overflow: hidden;
-        }
-        .editor-image-wrapper img {
+        .preview-image {
             max-width: 100%;
+            max-height: 70vh;
             display: block;
-        }
-        .toolbar {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            justify-content: center;
-            margin: 20px 0;
-            padding: 15px;
-            background: #1a1a1a;
+            margin: 0 auto 20px;
             border-radius: 8px;
         }
-        .toolbar button {
-            background: #333;
-            border: none;
-            color: #fff;
-            padding: 10px 15px;
-            border-radius: 6px;
-            cursor: pointer;
-        }
-        .toolbar button:hover { background: #444; }
-        .toolbar button.active { background: #2196F3; }
-
         .save-options {
             max-width: 600px;
             margin: 20px auto;
@@ -79,33 +57,26 @@
             justify-content: center;
             margin-top: 20px;
         }
-        .btn-save {
-            background: #4CAF50;
-            color: white;
-            border: none;
-            padding: 12px 30px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 1rem;
-        }
-        .btn-cancel {
-            background: #666;
-            color: white;
+        .btn {
             border: none;
             padding: 12px 30px;
             border-radius: 6px;
             cursor: pointer;
             font-size: 1rem;
             text-decoration: none;
+            display: inline-block;
+        }
+        .btn-edit {
+            background: #4a9eff;
+            color: white;
+        }
+        .btn-cancel {
+            background: #666;
+            color: white;
         }
         .btn-restore {
             background: #FF9800;
             color: white;
-            border: none;
-            padding: 12px 30px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 1rem;
         }
     </style>
 </head>
@@ -114,26 +85,8 @@
         <h1><a href="/">dajtu</a></h1>
     </div>
 
-    <div class="editor-container">
-        <div class="editor-image-wrapper">
-            <img id="editorImage" src="/i/{{.Image.Slug}}/original">
-        </div>
-
-        <div class="toolbar">
-            <button onclick="cropper.rotate(-90)" title="Obróć w lewo">↺</button>
-            <button onclick="cropper.rotate(90)" title="Obróć w prawo">↻</button>
-            <button onclick="flipH()" title="Odbij poziomo">⇆</button>
-            <button onclick="flipV()" title="Odbij pionowo">⇅</button>
-            <span style="width: 20px"></span>
-            <button onclick="setAspectRatio(1)" title="1:1">1:1</button>
-            <button onclick="setAspectRatio(16/9)" title="16:9">16:9</button>
-            <button onclick="setAspectRatio(4/3)" title="4:3">4:3</button>
-            <button onclick="setAspectRatio(NaN)" title="Dowolny">Free</button>
-            <span style="width: 20px"></span>
-            <button onclick="undo()" title="Cofnij">↩</button>
-            <button onclick="redo()" title="Ponów">↪</button>
-            <button onclick="cropper.reset()" title="Reset">⟲</button>
-        </div>
+    <div class="preview-container">
+        <img class="preview-image" src="/i/{{.Image.Slug}}/original" alt="{{.Image.OriginalName}}">
 
         <div class="save-options">
             <h3>Zapisz jako:</h3>
@@ -148,89 +101,32 @@
         </div>
 
         <div class="action-buttons">
-            <a href="/i/{{.Image.Slug}}" class="btn-cancel">Anuluj</a>
+            <a href="/i/{{.Image.Slug}}" class="btn btn-cancel">Anuluj</a>
             {{if .Image.Edited}}
-            <button class="btn-restore" onclick="restoreOriginal()">Przywróć oryginał</button>
+            <button class="btn btn-restore" onclick="restoreOriginal()">Przywróć oryginał</button>
             {{end}}
-            <button class="btn-save" onclick="saveEdit()">Zapisz</button>
+            <button class="btn btn-edit" onclick="openEditor()">Edytuj</button>
         </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
+    {{template "partials/editor-modal.html" .}}
+
     <script>
     const slug = '{{.Image.Slug}}';
-    let cropper;
-    let historyStack = [];
-    let historyIndex = -1;
-    let scaleX = 1;
-    let scaleY = 1;
 
-    const img = document.getElementById('editorImage');
-    img.onload = function() {
-        cropper = new Cropper(img, {
-            viewMode: 1,
-            dragMode: 'move',
-            autoCropArea: 1,
-            restore: false,
-            guides: true,
-            center: true,
-            highlight: false,
-            cropBoxMovable: true,
-            cropBoxResizable: true,
-            toggleDragModeOnDblclick: false,
-            ready: function() {
-                historyStack = [cropper.getData()];
-                historyIndex = 0;
-            },
-            cropend: saveHistory
-        });
-    };
-
-    function saveHistory() {
-        historyStack = historyStack.slice(0, historyIndex + 1);
-        historyStack.push(cropper.getData());
-        historyIndex = historyStack.length - 1;
+    function openEditor() {
+        const imageUrl = '/i/' + slug + '/original';
+        window.editorModal.open(imageUrl);
     }
 
-    function undo() {
-        if (historyIndex > 0) {
-            historyIndex--;
-            cropper.setData(historyStack[historyIndex]);
-        }
-    }
-
-    function redo() {
-        if (historyIndex < historyStack.length - 1) {
-            historyIndex++;
-            cropper.setData(historyStack[historyIndex]);
-        }
-    }
-
-    function setAspectRatio(ratio) {
-        cropper.setAspectRatio(ratio);
-        saveHistory();
-    }
-
-    function flipH() {
-        scaleX = -scaleX;
-        cropper.scaleX(scaleX);
-        saveHistory();
-    }
-
-    function flipV() {
-        scaleY = -scaleY;
-        cropper.scaleY(scaleY);
-        saveHistory();
-    }
-
-    async function saveEdit() {
+    document.getElementById('applyEdit').addEventListener('click', async () => {
         const saveMode = document.querySelector('input[name="saveMode"]:checked').value;
-        const canvas = cropper.getCroppedCanvas({
-            maxWidth: 4096,
-            maxHeight: 4096,
-            imageSmoothingEnabled: true,
-            imageSmoothingQuality: 'high'
-        });
+        const canvas = window.editorModal.getCroppedCanvas();
+
+        if (!canvas) {
+            alert('Błąd generowania obrazu');
+            return;
+        }
 
         canvas.toBlob(async (blob) => {
             const formData = new FormData();
@@ -253,7 +149,7 @@
                 alert('Błąd połączenia');
             }
         }, 'image/jpeg', 0.95);
-    }
+    });
 
     async function restoreOriginal() {
         if (!confirm('Czy na pewno chcesz przywrócić oryginalny plik?')) return;
