@@ -354,6 +354,23 @@ func (h *ImageEditHandler) ServeHTTP(w http.ResponseWriter, r *http.Request, slu
 		}
 	}
 
+	// Update metadata with new dimensions and file size
+	totalSize := int64(0)
+	var origWidth, origHeight int
+	for _, res := range results {
+		totalSize += int64(len(res.Data))
+		if res.Name == "original" {
+			origWidth = res.Width
+			origHeight = res.Height
+		}
+	}
+	if origWidth > 0 && origHeight > 0 {
+		if err := h.db.UpdateImageMetadata(slug, origWidth, origHeight, totalSize); err != nil {
+			http.Error(w, "DB metadata update error", 500)
+			return
+		}
+	}
+
 	if err := h.db.MarkImageEdited(slug); err != nil {
 		http.Error(w, "DB error", 500)
 		return

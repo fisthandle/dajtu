@@ -771,3 +771,10 @@ func (db *DB) UnmarkImageEdited(slug string) error {
 	_, err := db.conn.Exec("UPDATE images SET edited = 0 WHERE slug = ?", slug)
 	return err
 }
+
+func (db *DB) UpdateImageMetadata(slug string, width, height int, fileSize int64) error {
+	_, err := db.conn.Exec(
+		"UPDATE images SET width = ?, height = ?, file_size = ? WHERE slug = ?",
+		width, height, fileSize, slug)
+	return err
+}
