@@ -1,11 +1,46 @@
 package config
 
 import (
+	"bufio"
 	"net/url"
 	"os"
 	"strconv"
 	"strings"
 )
+
+func init() {
+	loadEnvFile(".env")
+}
+
+func loadEnvFile(path string) {
+	file, err := os.Open(path)
+	if err != nil {
+		return // .env nie istnieje - ok, użyjemy env vars
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		key := strings.TrimSpace(parts[0])
+		value := strings.TrimSpace(parts[1])
+		// Usuń cudzysłowy jeśli są
+		if len(value) >= 2 && ((value[0] == '"' && value[len(value)-1] == '"') || (value[0] == '\'' && value[len(value)-1] == '\'')) {
+			value = value[1 : len(value)-1]
+		}
+		// Ustaw tylko jeśli nie jest już ustawiona (env vars mają priorytet)
+		if os.Getenv(key) == "" {
+			os.Setenv(key, value)
+		}
+	}
+}
 
 type Config struct {
 	Port               string

@@ -42,18 +42,21 @@ func (h *GalleryHandler) Index(w http.ResponseWriter, r *http.Request) {
 	}
 	var userData map[string]any
 	var isAdmin bool
-	if user := middleware.GetUser(r); user != nil {
+	user := middleware.GetUser(r)
+	if user != nil {
 		userData = map[string]any{
 			"Slug":        user.Slug,
 			"DisplayName": user.DisplayName,
 		}
 		isAdmin = slices.Contains(h.cfg.AdminNicks, user.DisplayName)
 	}
+	canUpload := h.cfg.PublicUpload || user != nil
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := h.indexTmpl.ExecuteTemplate(w, "index.html", map[string]any{
-		"User":    userData,
-		"IsAdmin": isAdmin,
-		"Welcome": r.URL.Query().Get("welcome") == "1",
+		"User":      userData,
+		"IsAdmin":   isAdmin,
+		"CanUpload": canUpload,
+		"Welcome":   r.URL.Query().Get("welcome") == "1",
 	}); err != nil {
 		log.Printf("index template error: %v", err)
 	}
@@ -71,6 +74,16 @@ func (h *GalleryHandler) Create(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
+	}
+
+	if !h.cfg.PublicUpload {
+		user := middleware.GetUser(r)
+		if user == nil {
+			log.Printf("gallery.Create: public upload disabled, user not logged in")
+			jsonError(w, "Galerie mogą tworzyć tylko zweryfikowani użytkownicy", http.StatusForbidden)
+			return
+		}
+		log.Printf("gallery.Create: public upload disabled but user %s is logged in", user.DisplayName)
 	}
 
 	r.Body = http.MaxBytesReader(w, r.Body, int64(h.cfg.MaxFileSizeMB)*1024*1024*10) // 10x for multiple files
@@ -522,21 +535,23 @@ func (h *GalleryHandler) View(w http.ResponseWriter, r *http.Request) {
 	baseURL := getBaseURL(h.cfg, r)
 
 	type ImageData struct {
-		Slug     string
-		URL      string
-		ThumbURL string
-		Width    int
-		Height   int
+		Slug      string
+		URL       string
+		ThumbURL  string
+		Width     int
+		Height    int
+		UpdatedAt int64
 	}
 
 	var imageData []ImageData
 	for _, img := range images {
 		imageData = append(imageData, ImageData{
-			Slug:     img.Slug,
-			URL:      baseURL + "/i/" + img.Slug + ".webp",
-			ThumbURL: baseURL + "/i/" + img.Slug + "/200.webp",
-			Width:    img.Width,
-			Height:   img.Height,
+			Slug:      img.Slug,
+			URL:       baseURL + "/i/" + img.Slug + ".webp",
+			ThumbURL:  baseURL + "/i/" + img.Slug + "/200.webp",
+			Width:     img.Width,
+			Height:    img.Height,
+			UpdatedAt: img.UpdatedAt,
 		})
 	}
 

@@ -17,13 +17,39 @@
 
         /* Container & Header */
         .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
-        .header { text-align: center; margin-top: 10px; margin-bottom: 20px; }
-        .header .logo { font-size: 2rem; font-weight: 300; }
-        .header .logo a { color: #fff; text-decoration: none; }
-        .gallery-header { text-align: center; margin-bottom: 20px; }
-        .gallery-header .logo { font-size: 2rem; font-weight: 300; }
-        .gallery-header .logo a { color: #fff; text-decoration: none; }
-        .gallery-title { font-size: 1.5rem; font-weight: 400; margin-bottom: 20px; text-align: center; }
+        .gallery-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 12px 0;
+            margin-bottom: 20px;
+        }
+        .gallery-header .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #4a9eff;
+            text-decoration: none;
+        }
+        .gallery-header .gallery-title {
+            margin: 0;
+            font-size: 1.2rem;
+            color: #ccc;
+            font-weight: 400;
+            text-align: center;
+            flex: 1;
+        }
+        .gallery-header .edit-toggle {
+            background: #333;
+            color: #fff;
+            border: 1px solid #444;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .gallery-header .edit-toggle:hover {
+            background: #444;
+        }
 
         /* Links */
         .links-compact {
@@ -150,39 +176,22 @@
             background: #4a9eff;
         }
 
-        /* 4. Edit Panel */
-        .edit-panel {
-            max-width: 800px;
+        /* 4. Edit Section */
+        .edit-section {
+            max-width: 900px;
             margin: 0 auto 30px;
-            background: #1a1a2e;
-            border: 1px solid #444;
-            border-radius: 12px;
-            padding: 20px;
         }
-        .edit-panel summary {
+        .edit-section h2 {
+            margin: 0 0 12px 0;
             font-size: 1.1rem;
-            cursor: pointer;
-            padding: 10px 0;
-            color: #4a9eff;
-            list-style: none;
+            color: #e0e0e0;
         }
-        .edit-panel summary::-webkit-details-marker {
-            display: none;
-        }
-        .edit-panel summary::before {
-            content: '▸ ';
-            display: inline-block;
-            transition: transform 0.2s;
-        }
-        .edit-panel[open] summary::before {
-            transform: rotate(90deg);
-        }
-        .token-form, .title-form, .title-editor {
+        .title-form, .title-editor {
             display: flex;
             gap: 10px;
             margin-top: 15px;
         }
-        .token-form input, .title-form input, .title-editor input {
+        .title-form input, .title-editor input {
             flex: 1;
             background: #0a0a0f;
             border: 1px solid #333;
@@ -191,7 +200,7 @@
             border-radius: 6px;
             font-size: 0.95rem;
         }
-        .token-form button, .title-form button, .title-editor button {
+        .title-form button, .title-editor button {
             background: #4a9eff;
             border: none;
             color: #fff;
@@ -200,29 +209,14 @@
             cursor: pointer;
             transition: background 0.2s;
         }
-        .token-form button:hover, .title-form button:hover, .title-editor button:hover {
+        .title-form button:hover, .title-editor button:hover {
             background: #3a8eef;
-        }
-        .token-status {
-            margin-top: 8px;
-            font-size: 0.9rem;
-            color: #888;
-        }
-        .token-status.error {
-            color: #ff7777;
-        }
-        .token-status.success {
-            color: #7ad97a;
         }
         .add-image-section {
             background: #1a1a2e;
             border-radius: 12px;
             padding: 20px;
             margin-bottom: 20px;
-            display: none;
-        }
-        .edit-mode .add-image-section {
-            display: block;
         }
         .add-image-dropzone {
             border: 2px dashed #444;
@@ -244,6 +238,66 @@
             border-left: 3px solid #4a9eff;
             color: #4a9eff;
             font-size: 0.9rem;
+        }
+        .edit-section .links-compact {
+            font-size: 0.85rem;
+        }
+        .edit-section .link-label {
+            min-width: 100px;
+        }
+        .edit-section .link-url {
+            font-size: 0.8rem;
+        }
+
+        /* 5. Modal */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: #1a1a1a;
+            padding: 2rem;
+            border-radius: 8px;
+            border: 1px solid #333;
+            max-width: 400px;
+            width: 90%;
+        }
+        .modal-content h3 {
+            margin-top: 0;
+            color: #fff;
+        }
+        .modal-content input {
+            width: 100%;
+            padding: 0.75rem;
+            margin: 1rem 0;
+            background: #111;
+            border: 1px solid #333;
+            color: #fff;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .modal-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+        }
+        .modal-actions button {
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .modal-actions button.primary {
+            background: #4a9eff;
+            color: #fff;
+            border: none;
         }
         .upload-progress {
             margin-top: 15px;
@@ -419,11 +473,19 @@
                 grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
                 gap: 10px;
             }
-            .header .logo {
-                font-size: 1.5rem;
+            .gallery-header {
+                flex-direction: column;
+                align-items: stretch;
+                text-align: center;
             }
-            .gallery-title {
-                font-size: 1.2rem;
+            .gallery-header .logo {
+                font-size: 1.3rem;
+            }
+            .gallery-header .gallery-title {
+                font-size: 1.1rem;
+            }
+            .gallery-header .edit-toggle {
+                width: 100%;
             }
             .links-compact {
                 padding: 15px;
@@ -454,43 +516,131 @@
                 gap: 10px;
             }
         }
+
+        /* Toast notifications */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .toast {
+            background: #1a1a2e;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 12px 20px;
+            color: #fff;
+            font-size: 0.9rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slideIn 0.3s ease;
+            max-width: 300px;
+        }
+        .toast.success { border-left: 4px solid #4a9eff; }
+        .toast.error { border-left: 4px solid #ff4a4a; }
+        .toast-icon { font-size: 1.2rem; }
+        .toast.success .toast-icon { color: #4a9eff; }
+        .toast.error .toast-icon { color: #ff4a4a; }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+
+        /* Image update flash */
+        .gallery-item.updated img {
+            animation: flashUpdate 0.5s ease;
+        }
+        @keyframes flashUpdate {
+            0% { filter: brightness(1); }
+            50% { filter: brightness(1.5); }
+            100% { filter: brightness(1); }
+        }
+
+        /* Confirm modal */
+        .confirm-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            animation: fadeIn 0.2s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .confirm-modal-content {
+            background: #1a1a2e;
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 360px;
+            width: 90%;
+            text-align: center;
+        }
+        .confirm-modal-content h3 {
+            margin: 0 0 12px;
+            color: #fff;
+            font-size: 1.1rem;
+        }
+        .confirm-modal-content p {
+            color: #888;
+            margin: 0 0 20px;
+            font-size: 0.9rem;
+        }
+        .confirm-modal-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+        .confirm-modal-buttons button {
+            padding: 10px 24px;
+            border-radius: 6px;
+            border: none;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .confirm-modal-buttons .btn-cancel {
+            background: #333;
+            color: #fff;
+        }
+        .confirm-modal-buttons .btn-cancel:hover {
+            background: #444;
+        }
+        .confirm-modal-buttons .btn-danger {
+            background: #dc3545;
+            color: #fff;
+        }
+        .confirm-modal-buttons .btn-danger:hover {
+            background: #c82333;
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1 class="logo"><a href="/">dajtu</a></h1>
-        </div>
-        {{if .Title}}<h2 class="gallery-title">{{.Title}}</h2>{{end}}
-
-        <details class="edit-panel" id="editPanel" {{if .EditMode}}open{{end}}>
-            <summary>Edycja galerii</summary>
-            <form class="token-form" id="tokenForm">
-                <input type="text" id="tokenInput" placeholder="Wklej edit token..." value="{{.EditToken}}">
-                <button type="submit">Odblokuj</button>
-                <div class="token-status" id="tokenStatus" role="status" aria-live="polite"></div>
-            </form>
-            <form class="title-form" id="titleForm">
-                <input type="text" id="titleInput" placeholder="Tytuł galerii..." value="{{.Title}}">
-                <button type="submit">Zapisz tytuł</button>
-            </form>
-            <p class="edit-status">Tryb edycji aktywny - kliknij X na obrazku żeby usunąć</p>
-        </details>
-
-        <div class="add-image-section">
-            <h3>Dodaj zdjęcia</h3>
-            <div class="add-image-dropzone" id="addDropzone">
-                <input type="file" id="addFileInput" multiple accept="image/*" style="display: none;">
-                <div class="icon">📤</div>
-                <p>Przeciągnij zdjęcia lub kliknij aby wybrać</p>
-            </div>
-            <div class="upload-progress" id="uploadProgress" style="display: none;">
-                <div class="progress-bar">
-                    <div class="progress-fill" id="progressFill"></div>
-                </div>
-                <p id="progressText">Wysyłanie...</p>
-            </div>
-        </div>
+    <div class="toast-container" id="toastContainer"></div>
+    <div class="container{{if .EditMode}} edit-mode{{end}}">
+        <header class="gallery-header">
+            <a href="/" class="logo">dajtu</a>
+            {{if .Title}}<h1 class="gallery-title">{{.Title}}</h1>{{end}}
+            {{if not .EditMode}}
+            <button class="edit-toggle" onclick="showEditModal()">Włącz edycję</button>
+            {{end}}
+        </header>
 
         <div class="gallery" id="gallery">
             {{range .Images}}
@@ -499,8 +649,8 @@
                     <button class="edit-btn" onclick="editImage('{{.Slug}}')" title="Edytuj">✎</button>
                     <button class="delete-btn" onclick="deleteImage('{{.Slug}}')" title="Usuń">&times;</button>
                 </div>
-                <a href="{{.URL}}" data-lightbox data-full="{{$.BaseURL}}/i/{{.Slug}}/1920">
-                    <img data-src="{{.ThumbURL}}" alt="" loading="lazy">
+                <a href="{{.URL}}" data-lightbox data-full="{{$.BaseURL}}/i/{{.Slug}}/1920?v={{.UpdatedAt}}">
+                    <img data-src="{{.ThumbURL}}?v={{.UpdatedAt}}" alt="" loading="lazy">
                 </a>
             </div>
             {{end}}
@@ -518,33 +668,67 @@
         </div>
         {{end}}
 
-        <div class="links-compact">
-            <h2>Linki do galerii</h2>
-            <div class="link-item">
-                <span class="link-label">Link do galerii:</span>
-                <code class="link-url" data-url="{{.BaseURL}}/g/{{.Slug}}">{{.BaseURL}}/g/{{.Slug}}</code>
-                <div class="link-actions">
-                    <button type="button" onclick="copyUrl(this)">Kopiuj</button>
-                    <button type="button" onclick="openUrl(this)">Otwórz</button>
+        {{if .EditMode}}
+        <div class="edit-section">
+            <h2>Dodaj zdjęcia</h2>
+            <div class="add-image-section">
+                <div class="add-image-dropzone" id="addDropzone">
+                    <input type="file" id="addFileInput" multiple accept="image/*" style="display: none;">
+                    <div class="icon">📤</div>
+                    <p>Przeciągnij zdjęcia lub kliknij aby wybrać</p>
+                </div>
+                <div class="upload-progress" id="uploadProgress" style="display: none;">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <p id="progressText">Wysyłanie...</p>
                 </div>
             </div>
-            {{if .EditMode}}
-            <div class="link-item">
-                <span class="link-label">Edit Token:</span>
-                <code class="link-url" data-url="{{.EditToken}}">{{.EditToken}}</code>
-                <div class="link-actions">
-                    <button type="button" onclick="copyUrl(this)">Kopiuj</button>
+            <p class="edit-status">Tryb edycji aktywny - kliknij X na obrazku żeby usunąć</p>
+
+            <h2>Dane galerii</h2>
+            <div class="links-compact">
+                <div class="link-item">
+                    <span class="link-label">Link:</span>
+                    <code class="link-url" data-url="{{.BaseURL}}/g/{{.Slug}}">{{.BaseURL}}/g/{{.Slug}}</code>
+                    <div class="link-actions">
+                        <button type="button" onclick="copyUrl(this)">Kopiuj</button>
+                    </div>
+                </div>
+                <div class="link-item">
+                    <span class="link-label">Token edycji:</span>
+                    <code class="link-url" data-url="{{.EditToken}}">{{.EditToken}}</code>
+                    <div class="link-actions">
+                        <button type="button" onclick="copyUrl(this)">Kopiuj</button>
+                    </div>
+                </div>
+                <div class="link-item">
+                    <span class="link-label">Link z edycją:</span>
+                    <code class="link-url" data-url="{{.BaseURL}}/g/{{.Slug}}?edit={{.EditToken}}">{{.BaseURL}}/g/{{.Slug}}?edit=...</code>
+                    <div class="link-actions">
+                        <button type="button" onclick="copyUrl(this)">Kopiuj</button>
+                    </div>
                 </div>
             </div>
-            <div class="link-item">
-                <span class="link-label">Link z edycją:</span>
-                <code class="link-url" data-url="{{.BaseURL}}/g/{{.Slug}}?edit={{.EditToken}}">{{.BaseURL}}/g/{{.Slug}}?edit={{.EditToken}}</code>
-                <div class="link-actions">
-                    <button type="button" onclick="copyUrl(this)">Kopiuj</button>
-                    <button type="button" onclick="openUrl(this)">Otwórz</button>
-                </div>
+
+            <h3>Zmień tytuł</h3>
+            <form class="title-form" id="titleForm">
+                <input type="text" id="galleryTitleInput" placeholder="Tytuł galerii" value="{{.Title}}">
+                <button type="submit">Zapisz</button>
+            </form>
+        </div>
+        {{end}}
+    </div>
+
+    <div id="edit-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h3>Włącz edycję</h3>
+            <p>Podaj token edycji galerii:</p>
+            <input type="text" id="edit-token-input" placeholder="Token edycji">
+            <div class="modal-actions">
+                <button onclick="closeEditModal()">Anuluj</button>
+                <button onclick="activateEditMode()" class="primary">Włącz</button>
             </div>
-            {{end}}
         </div>
     </div>
 
@@ -563,11 +747,81 @@
     {{template "editor-modal.html" .}}
 
     <script>
+        // Toast notifications
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <span class="toast-icon">${type === 'success' ? '✓' : '✕'}</span>
+                <span>${message}</span>
+            `;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.animation = 'fadeOut 0.3s ease forwards';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Confirm modal
+        function showConfirm(title, message, onConfirm) {
+            const modal = document.createElement('div');
+            modal.className = 'confirm-modal';
+            modal.innerHTML = `
+                <div class="confirm-modal-content">
+                    <h3>${title}</h3>
+                    <p>${message}</p>
+                    <div class="confirm-modal-buttons">
+                        <button class="btn-cancel">Anuluj</button>
+                        <button class="btn-danger">Usuń</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+
+            modal.querySelector('.btn-cancel').onclick = () => modal.remove();
+            modal.querySelector('.btn-danger').onclick = () => {
+                modal.remove();
+                onConfirm();
+            };
+            modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+            document.addEventListener('keydown', function handler(e) {
+                if (e.key === 'Escape') { modal.remove(); document.removeEventListener('keydown', handler); }
+            });
+        }
+
         function showLoading() {
             document.getElementById('loadingOverlay').classList.add('active');
         }
         function hideLoading() {
             document.getElementById('loadingOverlay').classList.remove('active');
+        }
+
+        function showEditModal() {
+            const modal = document.getElementById('edit-modal');
+            const input = document.getElementById('edit-token-input');
+            if (!modal || !input) return;
+            modal.style.display = 'flex';
+            input.focus();
+        }
+
+        function closeEditModal() {
+            const modal = document.getElementById('edit-modal');
+            if (!modal) return;
+            modal.style.display = 'none';
+        }
+
+        function activateEditMode() {
+            const input = document.getElementById('edit-token-input');
+            if (!input) return;
+            const token = input.value.trim();
+            if (!token) {
+                alert('Podaj token edycji');
+                return;
+            }
+            const url = new URL(window.location);
+            url.searchParams.set('edit', token);
+            window.location.href = url.toString();
         }
 
         function getLinkUrl(btn) {
@@ -598,11 +852,8 @@
         let editToken = '{{.EditToken}}';
         const baseURL = '{{.BaseURL}}';
         const container = document.querySelector('.container');
-        const tokenForm = document.getElementById('tokenForm');
-        const tokenInput = document.getElementById('tokenInput');
-        const tokenStatus = document.getElementById('tokenStatus');
         const titleForm = document.getElementById('titleForm');
-        const titleInput = document.getElementById('titleInput');
+        const titleInput = document.getElementById('galleryTitleInput');
         const gallery = document.getElementById('gallery');
         const lightbox = document.getElementById('lightbox');
         const lightboxImg = lightbox.querySelector('.lightbox-img');
@@ -614,84 +865,18 @@
         let currentIndex = 0;
         let images = [];
 
-        // Check URL for token
-        const params = new URLSearchParams(location.search);
-        if (params.get('edit')) {
-            tokenInput.value = params.get('edit');
-            enableEditMode();
-        }
-
-        function enableEditMode() {
-            container.classList.add('edit-mode');
-            editToken = tokenInput.value.trim();
-            if (tokenStatus) {
-                tokenStatus.textContent = 'Token poprawny. Tryb edycji aktywny.';
-                tokenStatus.classList.remove('error');
-                tokenStatus.classList.add('success');
-            }
-            // Update URL with token
-            const url = new URL(location.href);
-            url.searchParams.set('edit', tokenInput.value);
-            history.replaceState(null, '', url);
-        }
-
         function getEditToken() {
-            return tokenInput.value.trim() || editToken;
+            return editToken;
         }
 
-        tokenForm.addEventListener('submit', async e => {
+        if (titleForm && titleInput) {
+            titleForm.addEventListener('submit', async e => {
             e.preventDefault();
-            const token = tokenInput.value.trim();
-            if (!token) return;
-
-            if (tokenStatus) {
-                tokenStatus.textContent = 'Sprawdzam token...';
-                tokenStatus.classList.remove('error', 'success');
+            const token = getEditToken();
+            if (!token) {
+                alert('Brak tokenu edycji');
+                return;
             }
-
-            const formData = new FormData();
-            formData.append('title', titleInput.value);
-
-            try {
-                const res = await fetch(`/gallery/${gallerySlug}/title`, {
-                    method: 'POST',
-                    headers: { 'X-Edit-Token': token },
-                    body: formData
-                });
-
-                if (res.ok) {
-                    enableEditMode();
-                } else {
-                    let data = null;
-                    try {
-                        data = await res.json();
-                    } catch (err) {
-                        data = null;
-                    }
-                    if (tokenStatus) {
-                        tokenStatus.textContent = data?.error || 'Nieprawidłowy token';
-                        tokenStatus.classList.remove('success');
-                        tokenStatus.classList.add('error');
-                    }
-                }
-            } catch (err) {
-                if (tokenStatus) {
-                    tokenStatus.textContent = 'Błąd połączenia: ' + err.message;
-                    tokenStatus.classList.remove('success');
-                    tokenStatus.classList.add('error');
-                }
-            }
-        });
-
-        tokenInput.addEventListener('input', () => {
-            if (!tokenStatus) return;
-            tokenStatus.textContent = '';
-            tokenStatus.classList.remove('error', 'success');
-        });
-
-        titleForm.addEventListener('submit', async e => {
-            e.preventDefault();
-            const token = tokenInput.value;
             const newTitle = titleInput.value;
 
             const formData = new FormData();
@@ -710,20 +895,29 @@
                     if (titleEl) {
                         titleEl.textContent = newTitle;
                     } else {
-                        titleEl = document.createElement('h2');
+                        titleEl = document.createElement('h1');
                         titleEl.className = 'gallery-title';
                         titleEl.textContent = newTitle;
-                        const header = document.querySelector('.header');
-                        header.insertAdjacentElement('afterend', titleEl);
+                        const header = document.querySelector('.gallery-header');
+                        if (header) {
+                            const toggle = header.querySelector('.edit-toggle');
+                            if (toggle) {
+                                header.insertBefore(titleEl, toggle);
+                            } else {
+                                header.appendChild(titleEl);
+                            }
+                        }
                     }
                 } else if (titleEl) {
                     titleEl.remove();
                 }
+                showToast('Tytuł zapisany');
             } else {
                 const data = await res.json();
-                alert('Błąd: ' + (data.error || 'Nieznany błąd'));
+                showToast('Błąd: ' + (data.error || 'Nieznany błąd'), 'error');
             }
-        });
+            });
+        }
 
         // Lazy loading
         const observer = new IntersectionObserver(entries => {
@@ -806,6 +1000,11 @@
 
         // Keyboard navigation
         document.addEventListener('keydown', e => {
+            const modal = document.getElementById('edit-modal');
+            if (modal && modal.style.display === 'flex' && e.key === 'Escape') {
+                closeEditModal();
+                return;
+            }
             if (!lightbox.classList.contains('active')) return;
 
             if (e.key === 'Escape') {
@@ -820,40 +1019,41 @@
         });
 
         // Delete image
-        async function deleteImage(imageSlug) {
-            if (!confirm('Usunąć ten obrazek?')) return;
-
-            showLoading();
-            try {
-                const token = getEditToken();
-                if (!token) {
-                    alert('Wpisz edit token');
-                    hideLoading();
-                    return;
-                }
-                const response = await fetch(`${baseURL}/gallery/${gallerySlug}/${imageSlug}`, {
-                    method: 'DELETE',
-                    headers: { 'X-Edit-Token': token }
-                });
-
-                if (response.ok) {
-                    document.querySelector(`.gallery-item[data-slug="${imageSlug}"]`).remove();
-
-                    if (document.querySelectorAll('.gallery-item').length === 0) {
-                        document.getElementById('gallery').innerHTML = `
-                            <div class="empty-gallery">
-                                <h3>Galeria jest pusta</h3>
-                                <p>Dodaj zdjęcia poniżej.</p>
-                            </div>
-                        `;
+        function deleteImage(imageSlug) {
+            showConfirm('Usunąć zdjęcie?', 'Ta operacja jest nieodwracalna.', async () => {
+                showLoading();
+                try {
+                    const token = getEditToken();
+                    if (!token) {
+                        showToast('Brak tokenu edycji', 'error');
+                        hideLoading();
+                        return;
                     }
-                } else {
-                    alert('Błąd podczas usuwania');
+                    const response = await fetch(`${baseURL}/gallery/${gallerySlug}/${imageSlug}`, {
+                        method: 'DELETE',
+                        headers: { 'X-Edit-Token': token }
+                    });
+
+                    if (response.ok) {
+                        document.querySelector(`.gallery-item[data-slug="${imageSlug}"]`).remove();
+                        showToast('Zdjęcie usunięte');
+
+                        if (document.querySelectorAll('.gallery-item').length === 0) {
+                            document.getElementById('gallery').innerHTML = `
+                                <div class="empty-gallery">
+                                    <h3>Galeria jest pusta</h3>
+                                    <p>Dodaj zdjęcia poniżej.</p>
+                                </div>
+                            `;
+                        }
+                    } else {
+                        showToast('Błąd usuwania', 'error');
+                    }
+                } catch (e) {
+                    showToast('Błąd połączenia', 'error');
                 }
-            } catch (e) {
-                alert('Błąd połączenia');
-            }
-            hideLoading();
+                hideLoading();
+            });
         }
 
         // Edit image
@@ -896,6 +1096,9 @@
                             if (img) {
                                 img.src = `${baseURL}/i/${currentEditingSlug}/200?t=${Date.now()}`;
                             }
+                            // Flash animation
+                            item.classList.add('updated');
+                            setTimeout(() => item.classList.remove('updated'), 600);
                             // Update lightbox entry
                             const idx = images.findIndex(i => i.link.closest('.gallery-item')?.dataset.slug === currentEditingSlug);
                             if (idx >= 0) {
@@ -903,8 +1106,9 @@
                             }
                         }
                         window.editorModal.close();
+                        showToast('Zdjęcie zapisane');
                     } else {
-                        alert('Błąd zastosowania edycji');
+                        showToast('Błąd zapisu zdjęcia', 'error');
                     }
                 } catch (err) {
                     alert('Błąd połączenia: ' + err.message);
@@ -971,20 +1175,22 @@
                         if (xhr.status === 200) {
                             try {
                                 const result = JSON.parse(xhr.responseText);
-                                addImagesToGallery(result.added || []);
+                                const added = result.added || [];
+                                addImagesToGallery(added);
+                                showToast(`Dodano ${added.length} ${added.length === 1 ? 'zdjęcie' : 'zdjęć'}`);
                             } catch (e) {
-                                alert('Błąd parsowania odpowiedzi');
+                                showToast('Błąd parsowania odpowiedzi', 'error');
                             }
                             progress.style.display = 'none';
                             fileInput.value = '';
                         } else {
-                            alert('Błąd podczas wysyłania');
+                            showToast('Błąd podczas wysyłania', 'error');
                             progress.style.display = 'none';
                         }
                     };
 
                     xhr.onerror = () => {
-                        alert('Błąd połączenia');
+                        showToast('Błąd połączenia', 'error');
                         progress.style.display = 'none';
                     };
 

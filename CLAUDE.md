@@ -110,12 +110,41 @@ Panel dostępny dla użytkowników z listy `ADMIN_NICKS` (domyślnie: "KS Amator
 ## Lokalne uruchomienie
 
 ```bash
-# Zabij poprzednią instancję i uruchom nową
-pkill -f "./dajtu" 2>/dev/null; sleep 1
-set -a && source .env.local && set +a && ./dajtu
+# Kompilacja i uruchomienie
+go build -o dajtu ./cmd/dajtu && ./dajtu
 ```
 
-**Uwaga:** Bez zmiennych `BRAT_*` serwer nie wystartuje. Plik `.env.local` zawiera wszystkie wymagane zmienne.
+**Konfiguracja:** Aplikacja automatycznie ładuje `.env` z katalogu głównego (symlink do `config/.env`).
+
+```bash
+# Struktura
+config/.env      # właściwy plik z konfiguracją (gitignored)
+.env -> config/.env   # symlink
+```
+
+**Uwaga:** Bez zmiennych `BRAT_*` serwer nie wystartuje.
+
+## Logi
+
+Aplikacja używa standardowego `log` package (stderr).
+
+**Lokalnie:** logi widoczne w terminalu gdzie uruchomiono `./dajtu`
+
+**Staging:** `docker logs dajtu_app --tail 100 -f`
+
+```bash
+# Filtrowanie błędów
+ssh staging "docker logs dajtu_app 2>&1 | grep -i error"
+
+# Logi z ostatniej godziny
+ssh staging "docker logs dajtu_app --since 1h"
+```
+
+### TODO: Logi do pliku
+Rozważyć przekierowanie stderr do `data/logs/` przy deployu:
+- Rotacja logów (dzienne pliki lub max rozmiar)
+- Łatwiejsze przeszukiwanie historii
+- Opcja: slog (Go stdlib) dla structured logging (JSON)
 
 ## Troubleshooting
 

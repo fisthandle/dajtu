@@ -87,9 +87,13 @@ func (h *UploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log.Printf("upload.Create: method=%s content_length=%d", r.Method, r.ContentLength)
 
 	if !h.cfg.PublicUpload {
-		log.Printf("upload.Create: public upload disabled")
-		jsonError(w, "public upload disabled", http.StatusForbidden)
-		return
+		user := middleware.GetUser(r)
+		if user == nil {
+			log.Printf("upload.Create: public upload disabled, user not logged in")
+			jsonError(w, "Obrazy mogą przesyłać tylko zweryfikowani użytkownicy", http.StatusForbidden)
+			return
+		}
+		log.Printf("upload.Create: public upload disabled but user %s is logged in", user.DisplayName)
 	}
 
 	// Limit request body
