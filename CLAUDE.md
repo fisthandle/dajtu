@@ -110,7 +110,8 @@ Panel dostępny dla użytkowników z listy `ADMIN_NICKS` (domyślnie: "KS Amator
 ## Lokalne uruchomienie
 
 ```bash
-# Załaduj zmienne i uruchom
+# Zabij poprzednią instancję i uruchom nową
+pkill -f "./dajtu" 2>/dev/null; sleep 1
 set -a && source .env.local && set +a && ./dajtu
 ```
 

@@ -234,6 +234,26 @@
             color: #4a9eff;
             font-size: 0.9rem;
         }
+        .upload-progress {
+            margin-top: 15px;
+        }
+        .progress-bar {
+            height: 8px;
+            background: #2d2d44;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: #4a9eff;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        .upload-progress p {
+            margin: 10px 0 0 0;
+            color: #888;
+            font-size: 14px;
+        }
 
         /* 6. Loading Overlay */
         .loading-overlay {
@@ -472,6 +492,23 @@
             </div>
             <p class="edit-status">Tryb edycji aktywny - kliknij X na obrazku żeby usunąć</p>
         </details>
+
+        {{if .EditMode}}
+        <div class="add-image-section">
+            <h3>Dodaj zdjęcia</h3>
+            <div class="add-image-dropzone" id="addDropzone">
+                <input type="file" id="addFileInput" multiple accept="image/*" style="display: none;">
+                <div class="icon">📤</div>
+                <p>Przeciągnij zdjęcia lub kliknij aby wybrać</p>
+            </div>
+            <div class="upload-progress" id="uploadProgress" style="display: none;">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <p id="progressText">Wysyłanie...</p>
+            </div>
+        </div>
+        {{end}}
 
         <div class="gallery" id="gallery">
             {{range .Images}}
@@ -763,6 +800,152 @@
 
             addFiles.value = '';
         });
+
+        // Drag & drop upload
+        {{if .EditMode}}
+        const dropzone = document.getElementById('addDropzone');
+        const fileInput = document.getElementById('addFileInput');
+
+        if (dropzone && fileInput) {
+            dropzone.addEventListener('click', () => fileInput.click());
+
+            dropzone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropzone.classList.add('dragover');
+            });
+
+            dropzone.addEventListener('dragleave', () => {
+                dropzone.classList.remove('dragover');
+            });
+
+            dropzone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropzone.classList.remove('dragover');
+                handleFiles(e.dataTransfer.files);
+            });
+
+            fileInput.addEventListener('change', () => {
+                handleFiles(fileInput.files);
+            });
+
+            async function handleFiles(files) {
+                if (files.length === 0) return;
+
+                const progress = document.getElementById('uploadProgress');
+                const progressFill = document.getElementById('progressFill');
+                const progressText = document.getElementById('progressText');
+
+                progress.style.display = 'block';
+                progressFill.style.width = '0%';
+
+                const formData = new FormData();
+                for (const file of files) {
+                    formData.append('files', file);
+                }
+
+                try {
+                    const xhr = new XMLHttpRequest();
+
+                    xhr.upload.onprogress = (e) => {
+                        if (e.lengthComputable) {
+                            const percent = (e.loaded / e.total) * 100;
+                            progressFill.style.width = percent + '%';
+                            progressText.textContent = `Wysyłanie... ${Math.round(percent)}%`;
+                        }
+                    };
+
+                    xhr.onload = function() {
+                        if (xhr.status === 200) {
+                            try {
+                                const result = JSON.parse(xhr.responseText);
+                                addImagesToGallery(result.images || []);
+                            } catch (e) {
+                                alert('Błąd parsowania odpowiedzi');
+                            }
+                            progress.style.display = 'none';
+                            fileInput.value = '';
+                        } else {
+                            alert('Błąd podczas wysyłania');
+                            progress.style.display = 'none';
+                        }
+                    };
+
+                    xhr.onerror = () => {
+                        alert('Błąd połączenia');
+                        progress.style.display = 'none';
+                    };
+
+                    xhr.open('POST', `${baseURL}/gallery/${gallerySlug}/add`);
+                    xhr.setRequestHeader('X-Edit-Token', editToken);
+                    xhr.send(formData);
+
+                } catch (e) {
+                    alert('Błąd: ' + e.message);
+                    progress.style.display = 'none';
+                }
+            }
+
+            function addImagesToGallery(newImages) {
+                const gallery = document.getElementById('gallery');
+
+                // Remove empty state if present
+                const emptyState = gallery.querySelector('.empty-gallery');
+                if (emptyState) emptyState.remove();
+
+                for (const img of newImages) {
+                    const item = document.createElement('div');
+                    item.className = 'gallery-item';
+                    item.dataset.slug = img.slug;
+
+                    // Actions div
+                    const actions = document.createElement('div');
+                    actions.className = 'item-actions';
+
+                    const editBtn = document.createElement('button');
+                    editBtn.className = 'edit-btn';
+                    editBtn.title = 'Edytuj';
+                    editBtn.textContent = '✎';
+                    editBtn.onclick = () => editImage(img.slug);
+
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'delete-btn';
+                    deleteBtn.title = 'Usuń';
+                    deleteBtn.textContent = '×';
+                    deleteBtn.onclick = () => deleteImage(img.slug);
+
+                    actions.appendChild(editBtn);
+                    actions.appendChild(deleteBtn);
+
+                    // Image link
+                    const currentIndex = images.length;
+                    const link = document.createElement('a');
+                    link.href = 'javascript:void(0)';
+                    link.dataset.full = `${baseURL}/i/${img.slug}/1920`;
+                    link.dataset.lightbox = '';
+                    link.onclick = (e) => {
+                        e.preventDefault();
+                        openLightbox(currentIndex);
+                    };
+
+                    const imgEl = document.createElement('img');
+                    imgEl.src = `${baseURL}/i/${img.slug}/200`;
+                    imgEl.alt = '';
+                    imgEl.className = 'loaded';
+
+                    link.appendChild(imgEl);
+                    item.appendChild(actions);
+                    item.appendChild(link);
+                    gallery.appendChild(item);
+
+                    // Add to images array for lightbox
+                    images.push({
+                        full: `${baseURL}/i/${img.slug}/1920`,
+                        link: link
+                    });
+                }
+            }
+        }
+        {{end}}
     </script>
 </body>
 </html>
