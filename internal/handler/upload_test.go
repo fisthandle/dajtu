@@ -66,7 +66,7 @@ func TestUploadHandler_MethodNotAllowed(t *testing.T) {
 	cfg, db, fs, cleanup := testSetup(t)
 	defer cleanup()
 
-	h := NewUploadHandler(cfg, db, fs)
+	h := NewUploadHandler(cfg, db, fs, nil)
 
 	req := httptest.NewRequest("GET", "/upload", nil)
 	rec := httptest.NewRecorder()
@@ -82,7 +82,7 @@ func TestUploadHandler_NoFile(t *testing.T) {
 	cfg, db, fs, cleanup := testSetup(t)
 	defer cleanup()
 
-	h := NewUploadHandler(cfg, db, fs)
+	h := NewUploadHandler(cfg, db, fs, nil)
 
 	// Create valid multipart form without "file" field
 	var buf bytes.Buffer
@@ -105,7 +105,7 @@ func TestUploadHandler_InvalidFormat(t *testing.T) {
 	cfg, db, fs, cleanup := testSetup(t)
 	defer cleanup()
 
-	h := NewUploadHandler(cfg, db, fs)
+	h := NewUploadHandler(cfg, db, fs, nil)
 
 	// Send a text file instead of image
 	content := []byte("this is not an image")
@@ -148,7 +148,7 @@ func TestUploadHandler_GenerateUniqueSlug(t *testing.T) {
 	cfg, db, fs, cleanup := testSetup(t)
 	defer cleanup()
 
-	h := NewUploadHandler(cfg, db, fs)
+	h := NewUploadHandler(cfg, db, fs, nil)
 
 	slug := h.db.GenerateUniqueSlug("images", 5)
 	if len(slug) != 5 {
@@ -166,7 +166,7 @@ func TestUploadHandler_GenerateUniqueSlug_Collision(t *testing.T) {
 	cfg, db, fs, cleanup := testSetup(t)
 	defer cleanup()
 
-	h := NewUploadHandler(cfg, db, fs)
+	h := NewUploadHandler(cfg, db, fs, nil)
 
 	// Pre-insert many slugs to increase collision probability
 	for i := 0; i < 100; i++ {
@@ -198,7 +198,7 @@ func TestUploadHandler_SavesOriginal(t *testing.T) {
 	defer cleanup()
 	cfg.KeepOriginalFormat = true
 
-	h := NewUploadHandler(cfg, db, fs)
+	h := NewUploadHandler(cfg, db, fs, nil)
 
 	req := createMultipartRequest(t, "file", "test.jpg", testutil.SampleJPEG())
 	rec := httptest.NewRecorder()

@@ -29,7 +29,7 @@ func TestBratUpload_InvalidToken(t *testing.T) {
 		MaxPseudonimBytes: 64,
 	})
 
-	h := NewBratUploadHandler(cfg, db, fs, decoder)
+	h := NewBratUploadHandler(cfg, db, fs, decoder, nil)
 
 	content := testutil.SampleJPEG()
 	var buf bytes.Buffer
@@ -71,7 +71,7 @@ func TestBratUpload_MissingImage(t *testing.T) {
 		MaxPseudonimBytes: 64,
 	})
 
-	h := NewBratUploadHandler(cfg, db, fs, decoder)
+	h := NewBratUploadHandler(cfg, db, fs, decoder, nil)
 
 	var buf bytes.Buffer
 	writer := multipart.NewWriter(&buf)
@@ -105,7 +105,7 @@ func TestBratUpload_InvalidPath(t *testing.T) {
 		MaxPseudonimBytes: 64,
 	})
 
-	h := NewBratUploadHandler(cfg, db, fs, decoder)
+	h := NewBratUploadHandler(cfg, db, fs, decoder, nil)
 
 	tests := []string{
 		"/brtup/token",
@@ -148,7 +148,7 @@ func TestBratUpload_CORSHeaders(t *testing.T) {
 		MaxPseudonimBytes: 64,
 	})
 
-	h := NewBratUploadHandler(cfg, db, fs, decoder)
+	h := NewBratUploadHandler(cfg, db, fs, decoder, nil)
 
 	origins := []string{
 		"https://braterstwo.eu",
@@ -200,7 +200,7 @@ func TestBratUpload_CORSHeaders_InvalidOrigin(t *testing.T) {
 		MaxPseudonimBytes: 64,
 	})
 
-	h := NewBratUploadHandler(cfg, db, fs, decoder)
+	h := NewBratUploadHandler(cfg, db, fs, decoder, nil)
 
 	req := httptest.NewRequest("POST", "/brtup/token/123/nope", nil)
 	req.Header.Set("Origin", "https://evil.com")
@@ -230,7 +230,7 @@ func TestBratUpload_OptionsRequest(t *testing.T) {
 		MaxPseudonimBytes: 64,
 	})
 
-	h := NewBratUploadHandler(cfg, db, fs, decoder)
+	h := NewBratUploadHandler(cfg, db, fs, decoder, nil)
 
 	req := httptest.NewRequest("OPTIONS", "/brtup/token/123/nope", nil)
 	req.Header.Set("Origin", "https://braterstwo.eu")
@@ -253,7 +253,7 @@ func TestBratUpload_DecoderNil(t *testing.T) {
 	db, _ := testutil.TestDB(t)
 	fs, _ := testutil.TestFilesystem(t)
 
-	h := NewBratUploadHandler(cfg, db, fs, nil)
+	h := NewBratUploadHandler(cfg, db, fs, nil, nil)
 
 	req := httptest.NewRequest("POST", "/brtup/token/123/nope", nil)
 	rec := httptest.NewRecorder()
@@ -311,7 +311,7 @@ func TestBratUpload_MethodNotAllowed(t *testing.T) {
 		MaxPseudonimBytes: 64,
 	})
 
-	h := NewBratUploadHandler(cfg, db, fs, decoder)
+	h := NewBratUploadHandler(cfg, db, fs, decoder, nil)
 
 	req := httptest.NewRequest("GET", "/brtup/token/123/nope", nil)
 	rec := httptest.NewRecorder()
@@ -339,7 +339,7 @@ func TestBratUpload_InvalidImageFormat(t *testing.T) {
 		MaxPseudonimBytes: 64,
 	})
 
-	h := NewBratUploadHandler(cfg, db, fs, decoder)
+	h := NewBratUploadHandler(cfg, db, fs, decoder, nil)
 
 	content := []byte("not an image")
 	var buf bytes.Buffer
