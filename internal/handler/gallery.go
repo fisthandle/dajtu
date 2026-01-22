@@ -74,9 +74,11 @@ func (h *GalleryHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	existingImageSlug := r.FormValue("existing_image")
 	files := r.MultipartForm.File["files"]
-	if len(files) == 0 {
-		jsonError(w, "no files provided", http.StatusBadRequest)
+
+	if existingImageSlug == "" && len(files) == 0 {
+		jsonError(w, "no files or existing image provided", http.StatusBadRequest)
 		return
 	}
 
@@ -110,6 +112,53 @@ func (h *GalleryHandler) Create(w http.ResponseWriter, r *http.Request) {
 	baseURL := getBaseURL(h.cfg, r)
 
 	var uploadedImages []UploadResponse
+
+	// Handle existing image if provided
+	if existingImageSlug != "" {
+		editToken := r.Header.Get("X-Edit-Token")
+		if editToken == "" {
+			editToken = r.FormValue("edit_token")
+		}
+
+		existingImage, err := h.db.GetImageBySlug(existingImageSlug)
+		if err != nil || existingImage == nil {
+			if delErr := h.db.DeleteGalleryByID(galleryID); delErr != nil {
+				log.Printf("failed to rollback gallery %d: %v", galleryID, delErr)
+			}
+			jsonError(w, "image not found", http.StatusNotFound)
+			return
+		}
+
+		if existingImage.EditToken != editToken {
+			if delErr := h.db.DeleteGalleryByID(galleryID); delErr != nil {
+				log.Printf("failed to rollback gallery %d: %v", galleryID, delErr)
+			}
+			jsonError(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		if err := h.db.AddImageToGallery(galleryID, existingImage.ID); err != nil {
+			if delErr := h.db.DeleteGalleryByID(galleryID); delErr != nil {
+				log.Printf("failed to rollback gallery %d: %v", galleryID, delErr)
+			}
+			log.Printf("failed to add image to gallery: %v", err)
+			jsonError(w, "database error", http.StatusInternalServerError)
+			return
+		}
+
+		sizes := make(map[string]string)
+		sizes["original"] = buildImageURL(baseURL, existingImageSlug, "original")
+		sizes["1920"] = buildImageURL(baseURL, existingImageSlug, "1920")
+		sizes["800"] = buildImageURL(baseURL, existingImageSlug, "800")
+		sizes["200"] = buildImageURL(baseURL, existingImageSlug, "200")
+		sizes["thumb"] = buildImageURL(baseURL, existingImageSlug, "thumb")
+
+		uploadedImages = append(uploadedImages, UploadResponse{
+			Slug:  existingImageSlug,
+			URL:   sizes["original"],
+			Sizes: sizes,
+		})
+	}
 
 	for _, fileHeader := range files {
 		file, err := fileHeader.Open()
@@ -181,7 +230,9 @@ func (h *GalleryHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(uploadedImages) == 0 {
-		_ = h.db.DeleteGalleryByID(galleryID)
+		if delErr := h.db.DeleteGalleryByID(galleryID); delErr != nil {
+			log.Printf("failed to rollback gallery %d: %v", galleryID, delErr)
+		}
 		jsonError(w, "no valid images uploaded", http.StatusBadRequest)
 		return
 	}

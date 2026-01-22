@@ -791,3 +791,17 @@ func (db *DB) UpdateGalleryTitle(id int64, title string) error {
 		title, time.Now().Unix(), id)
 	return err
 }
+
+func (db *DB) AddImageToGallery(galleryID, imageID int64) error {
+	res, err := db.conn.Exec(
+		"UPDATE images SET gallery_id = ? WHERE id = ? AND gallery_id IS NULL",
+		galleryID, imageID)
+	if err != nil {
+		return err
+	}
+	rows, _ := res.RowsAffected()
+	if rows == 0 {
+		return fmt.Errorf("image already in gallery or not found")
+	}
+	return nil
+}
