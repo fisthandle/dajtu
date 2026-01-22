@@ -229,7 +229,8 @@ type ImageViewHandler struct {
 	baseURL string
 }
 
-func NewImageViewHandler(db *storage.DB, tmpl *template.Template, baseURL string) *ImageViewHandler {
+func NewImageViewHandler(db *storage.DB, baseURL string) *ImageViewHandler {
+	tmpl := template.Must(template.ParseFS(templates, "templates/image.html", "templates/partials/*.html"))
 	return &ImageViewHandler{db: db, tmpl: tmpl, baseURL: baseURL}
 }
 
@@ -256,7 +257,10 @@ func (h *ImageViewHandler) ServeHTTP(w http.ResponseWriter, r *http.Request, slu
 		"EditMode":  editMode,
 	}
 
-	h.tmpl.ExecuteTemplate(w, "image.html", data)
+	if err := h.tmpl.Execute(w, data); err != nil {
+		log.Printf("template error: %v", err)
+		http.Error(w, "Internal server error", 500)
+	}
 }
 
 type ImageEditHandler struct {

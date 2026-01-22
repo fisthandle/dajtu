@@ -8,218 +8,461 @@
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: system-ui, -apple-system, sans-serif;
-            background: #111;
-            color: #fff;
+            background: #0a0a0f;
+            color: #e0e0e0;
             min-height: 100vh;
             padding: 1em;
         }
+
+        /* Header */
         .header {
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 30px;
         }
         .header h1 {
-            font-size: 2rem;
+            font-size: 2.5rem;
             font-weight: 300;
+            margin-bottom: 8px;
         }
         .header h1 a {
             color: #fff;
             text-decoration: none;
         }
-        .links-table {
-            max-width: 800px;
-            margin: 0 auto 30px;
-            background: #1a1a1a;
+        .header h1 a:hover {
+            color: #4a9eff;
+        }
+        .header .filename {
+            color: #888;
+            font-size: 0.9rem;
+        }
+
+        /* Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Cards */
+        .card {
+            background: #1a1a2e;
             border-radius: 12px;
             padding: 20px;
+            margin-bottom: 20px;
         }
-        .links-table h2 {
+        .card h2 {
             font-size: 1rem;
             margin-bottom: 15px;
             color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
+
+        /* Image Preview */
+        .image-preview {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .image-preview img {
+            max-width: 100%;
+            max-height: 70vh;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Links */
         .link-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 10px 0;
-            border-bottom: 1px solid #333;
+            padding: 12px 0;
+            border-bottom: 1px solid #2a2a3e;
         }
         .link-row:last-child {
             border-bottom: none;
         }
         .link-row label {
             color: #888;
-            min-width: 100px;
+            min-width: 120px;
+            font-size: 0.9rem;
         }
         .link-row input {
             flex: 1;
-            background: #222;
-            border: 1px solid #333;
-            color: #fff;
-            padding: 8px 12px;
+            background: #0a0a0f;
+            border: 1px solid #2a2a3e;
+            color: #e0e0e0;
+            padding: 10px 12px;
             border-radius: 6px;
             margin: 0 10px;
             font-family: monospace;
+            font-size: 0.85rem;
+        }
+        .link-row input:focus {
+            outline: none;
+            border-color: #4a9eff;
         }
         .link-row button {
-            background: #333;
+            background: #2a2a3e;
             border: none;
-            color: #fff;
-            padding: 8px 15px;
+            color: #e0e0e0;
+            padding: 10px 18px;
             border-radius: 6px;
             cursor: pointer;
+            transition: background 0.2s;
+            font-size: 0.85rem;
         }
         .link-row button:hover {
-            background: #444;
+            background: #3a3a4e;
         }
-        .back-link {
-            text-align: center;
-            margin-bottom: 20px;
+        .link-row button.copied {
+            background: #4a9eff;
+            color: #fff;
         }
-        .back-link a {
-            color: #2196F3;
-            text-decoration: none;
-            margin: 0 15px;
+
+        /* Actions */
+        .actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
         }
-        .image-container {
-            text-align: center;
-        }
-        .image-container img {
-            max-width: 100%;
-            max-height: 80vh;
+        .btn {
+            padding: 12px 24px;
             border-radius: 8px;
-        }
-        .edit-btn {
-            display: inline-block;
-            background: #2196F3;
-            color: #fff;
-            padding: 10px 20px;
-            border-radius: 6px;
-            text-decoration: none;
-        }
-        .edit-btn:hover {
-            background: #1976D2;
-        }
-        .delete-section {
-            margin-top: 15px;
-            text-align: center;
-        }
-        .delete-btn {
-            background: #f44336;
-            color: #fff;
-            padding: 10px 20px;
-            border-radius: 6px;
             border: none;
             cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: all 0.2s;
         }
-        .delete-btn:hover {
-            background: #d32f2f;
+        .btn-primary {
+            background: #4a9eff;
+            color: #fff;
         }
-        .error {
-            color: #f44336;
+        .btn-primary:hover {
+            background: #3a8eef;
+        }
+        .btn-danger {
+            background: #ff4444;
+            color: #fff;
+        }
+        .btn-danger:hover {
+            background: #ee3333;
+        }
+
+        /* Create Gallery */
+        .dropzone {
+            border: 2px dashed #2a2a3e;
+            border-radius: 8px;
+            padding: 40px 20px;
             text-align: center;
-            margin: 0;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 15px;
+        }
+        .dropzone:hover {
+            border-color: #4a9eff;
+            background: rgba(74, 158, 255, 0.05);
+        }
+        .dropzone.dragover {
+            border-color: #4a9eff;
+            background: rgba(74, 158, 255, 0.1);
+        }
+        .dropzone-icon {
+            font-size: 3rem;
+            color: #888;
+            margin-bottom: 10px;
+        }
+        .dropzone-text {
+            color: #888;
+            font-size: 0.95rem;
+        }
+        .dropzone-hint {
+            color: #666;
+            font-size: 0.8rem;
+            margin-top: 5px;
+        }
+
+        /* Loading overlay */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(10, 10, 15, 0.9);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+        }
+        .loading-overlay.active {
+            display: flex;
+        }
+        .loading-spinner {
+            border: 4px solid #2a2a3e;
+            border-top: 4px solid #4a9eff;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Error */
+        .error {
+            color: #ff4444;
+            text-align: center;
+            padding: 10px;
+            background: rgba(255, 68, 68, 0.1);
+            border-radius: 6px;
         }
     </style>
 </head>
 <body>
     <div class="header">
         <h1><a href="/">dajtu</a></h1>
+        <div class="filename">{{.Image.OriginalName}}</div>
     </div>
 
-    <div class="links-table">
-        <h2>Linki do obrazka</h2>
-        <div class="link-row">
-            <label>Bezpośredni:</label>
-            <input type="text" readonly value="{{.BaseURL}}/i/{{.Image.Slug}}/original" onclick="this.select()">
-            <button onclick="copyLink(this)">Kopiuj</button>
+    <div class="container">
+        <!-- Image Preview -->
+        <div class="image-preview">
+            <img src="/i/{{.Image.Slug}}/1920" alt="{{.Image.OriginalName}}">
         </div>
-        <div class="link-row">
-            <label>1920px:</label>
-            <input type="text" readonly value="{{.BaseURL}}/i/{{.Image.Slug}}/1920" onclick="this.select()">
-            <button onclick="copyLink(this)">Kopiuj</button>
-        </div>
-        <div class="link-row">
-            <label>800px:</label>
-            <input type="text" readonly value="{{.BaseURL}}/i/{{.Image.Slug}}/800" onclick="this.select()">
-            <button onclick="copyLink(this)">Kopiuj</button>
-        </div>
-        <div class="link-row">
-            <label>Miniatura:</label>
-            <input type="text" readonly value="{{.BaseURL}}/i/{{.Image.Slug}}/thumb" onclick="this.select()">
-            <button onclick="copyLink(this)">Kopiuj</button>
-        </div>
-        <div class="link-row">
-            <label>BBCode:</label>
-            <input type="text" readonly value="[img]{{.BaseURL}}/i/{{.Image.Slug}}/original[/img]" onclick="this.select()">
-            <button onclick="copyLink(this)">Kopiuj</button>
-        </div>
-        <div class="link-row">
-            <label>HTML:</label>
-            <input type="text" readonly value='<img src="{{.BaseURL}}/i/{{.Image.Slug}}/original">' onclick="this.select()">
-            <button onclick="copyLink(this)">Kopiuj</button>
-        </div>
-    </div>
 
-    {{if .EditMode}}
-    <div class="links-table">
-        <h2>Edycja</h2>
-        <div class="link-row">
-            <label>Edit Token:</label>
-            <input type="text" readonly value="{{.EditToken}}" onclick="this.select()">
-            <button onclick="copyLink(this)">Kopiuj</button>
+        <!-- Links -->
+        <div class="card">
+            <h2>Linki do obrazka</h2>
+            <div class="link-row">
+                <label>Bezpośredni:</label>
+                <input type="text" id="link-original" readonly value="{{.BaseURL}}/i/{{.Image.Slug}}/original" onclick="this.select()">
+                <button onclick="copyLink('link-original', this)">Kopiuj</button>
+            </div>
+            <div class="link-row">
+                <label>1920px:</label>
+                <input type="text" id="link-1920" readonly value="{{.BaseURL}}/i/{{.Image.Slug}}/1920" onclick="this.select()">
+                <button onclick="copyLink('link-1920', this)">Kopiuj</button>
+            </div>
+            <div class="link-row">
+                <label>800px:</label>
+                <input type="text" id="link-800" readonly value="{{.BaseURL}}/i/{{.Image.Slug}}/800" onclick="this.select()">
+                <button onclick="copyLink('link-800', this)">Kopiuj</button>
+            </div>
+            <div class="link-row">
+                <label>Miniatura:</label>
+                <input type="text" id="link-thumb" readonly value="{{.BaseURL}}/i/{{.Image.Slug}}/thumb" onclick="this.select()">
+                <button onclick="copyLink('link-thumb', this)">Kopiuj</button>
+            </div>
+            <div class="link-row">
+                <label>BBCode:</label>
+                <input type="text" id="link-bbcode" readonly value="[img]{{.BaseURL}}/i/{{.Image.Slug}}/original[/img]" onclick="this.select()">
+                <button onclick="copyLink('link-bbcode', this)">Kopiuj</button>
+            </div>
+            <div class="link-row">
+                <label>HTML:</label>
+                <input type="text" id="link-html" readonly value='<img src="{{.BaseURL}}/i/{{.Image.Slug}}/original">' onclick="this.select()">
+                <button onclick="copyLink('link-html', this)">Kopiuj</button>
+            </div>
         </div>
-        <div class="link-row">
-            <label>Link z edycją:</label>
-            <input type="text" readonly value="{{.BaseURL}}/i/{{.Image.Slug}}?edit={{.EditToken}}" onclick="this.select()">
-            <button onclick="copyLink(this)">Kopiuj</button>
-        </div>
-        <div class="delete-section">
-            <button class="delete-btn" onclick="deleteImage()">Usuń obrazek</button>
-        </div>
-    </div>
-    {{else if .EditToken}}
-    <div class="links-table">
-        <p class="error">Nieprawidłowy edit token</p>
-    </div>
-    {{end}}
 
-    <div class="back-link">
-        <a href="/">← Wróć dodać kolejny</a>
-        {{if .CanEdit}}
-        <a href="/i/{{.Image.Slug}}/edit" class="edit-btn">✏️ Edytuj</a>
+        {{if .EditMode}}
+        <!-- Edit Token -->
+        <div class="card">
+            <h2>Edycja</h2>
+            <div class="link-row">
+                <label>Edit Token:</label>
+                <input type="text" id="link-token" readonly value="{{.EditToken}}" onclick="this.select()">
+                <button onclick="copyLink('link-token', this)">Kopiuj</button>
+            </div>
+            <div class="link-row">
+                <label>Link z edycją:</label>
+                <input type="text" id="link-edit" readonly value="{{.BaseURL}}/i/{{.Image.Slug}}?edit={{.EditToken}}" onclick="this.select()">
+                <button onclick="copyLink('link-edit', this)">Kopiuj</button>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="card">
+            <h2>Akcje</h2>
+            <div class="actions">
+                <button class="btn btn-primary" onclick="editImage()">Edytuj obrazek</button>
+                <button class="btn btn-danger" onclick="deleteImage()">Usuń obrazek</button>
+            </div>
+        </div>
+
+        <!-- Create Gallery -->
+        <div class="card">
+            <h2>Utwórz galerię</h2>
+            <p style="color: #888; margin-bottom: 10px;">Dodaj więcej obrazków, aby stworzyć galerię z tym zdjęciem</p>
+            <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
+                <div class="dropzone-icon">+</div>
+                <div class="dropzone-text">Kliknij lub przeciągnij pliki tutaj</div>
+                <div class="dropzone-hint">Zostanie utworzona galeria z obecnym obrazkiem</div>
+            </div>
+            <input type="file" id="fileInput" multiple accept="image/*" style="display: none;" onchange="handleFiles(this.files)">
+        </div>
+        {{else if .EditToken}}
+        <div class="card">
+            <p class="error">Nieprawidłowy edit token</p>
+        </div>
         {{end}}
     </div>
 
-    <div class="image-container">
-        <img src="/i/{{.Image.Slug}}/1920" alt="{{.Image.OriginalName}}">
+    <!-- Loading overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
     </div>
 
+    <!-- Editor Modal -->
+    {{template "partials/editor-modal.html"}}
+
     <script>
-    function copyLink(btn) {
-        const input = btn.previousElementSibling;
+    const baseURL = '{{.BaseURL}}';
+    const imageSlug = '{{.Image.Slug}}';
+    const editToken = '{{.EditToken}}';
+
+    function copyLink(inputId, btn) {
+        const input = document.getElementById(inputId);
         input.select();
-        navigator.clipboard.writeText(input.value);
-        btn.textContent = 'Skopiowano!';
-        setTimeout(() => btn.textContent = 'Kopiuj', 2000);
+        navigator.clipboard.writeText(input.value).then(() => {
+            btn.textContent = '✓ Skopiowano';
+            btn.classList.add('copied');
+            setTimeout(() => {
+                btn.textContent = 'Kopiuj';
+                btn.classList.remove('copied');
+            }, 2000);
+        });
     }
 
-    function deleteImage() {
-        if (!confirm('Na pewno usunąć ten obrazek?')) return;
+    function editImage() {
+        if (window.editorModal) {
+            window.editorModal.open(`${baseURL}/i/${imageSlug}/original`);
+        }
+    }
 
-        const token = new URLSearchParams(location.search).get('edit');
-        fetch('/i/{{.Image.Slug}}', {
-            method: 'DELETE',
-            headers: { 'X-Edit-Token': token }
-        }).then(res => {
+    async function deleteImage() {
+        if (!confirm('Na pewno usunąć ten obrazek? Tej operacji nie można cofnąć.')) return;
+
+        document.getElementById('loadingOverlay').classList.add('active');
+
+        try {
+            const res = await fetch(`/i/${imageSlug}`, {
+                method: 'DELETE',
+                headers: { 'X-Edit-Token': editToken }
+            });
+
             if (res.ok) {
                 sessionStorage.setItem('flash', 'Obrazek usunięty');
                 location.href = '/';
             } else {
-                alert('Błąd usuwania');
+                alert('Błąd usuwania obrazka');
             }
+        } catch (err) {
+            alert('Błąd połączenia: ' + err.message);
+        } finally {
+            document.getElementById('loadingOverlay').classList.remove('active');
+        }
+    }
+
+    // Dropzone for gallery creation
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('fileInput');
+
+    if (dropzone) {
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropzone.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropzone.addEventListener(eventName, () => {
+                dropzone.classList.add('dragover');
+            });
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropzone.addEventListener(eventName, () => {
+                dropzone.classList.remove('dragover');
+            });
+        });
+
+        dropzone.addEventListener('drop', (e) => {
+            const files = e.dataTransfer.files;
+            handleFiles(files);
         });
     }
+
+    async function handleFiles(files) {
+        if (!files || files.length === 0) return;
+
+        const formData = new FormData();
+        formData.append('existing_image', imageSlug);
+
+        for (let file of files) {
+            formData.append('images', file);
+        }
+
+        document.getElementById('loadingOverlay').classList.add('active');
+
+        try {
+            const res = await fetch('/gallery', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                const editParam = data.edit_token ? `?edit=${data.edit_token}` : '';
+                location.href = `/g/${data.slug}${editParam}`;
+            } else {
+                const error = await res.text();
+                alert('Błąd tworzenia galerii: ' + error);
+            }
+        } catch (err) {
+            alert('Błąd połączenia: ' + err.message);
+        } finally {
+            document.getElementById('loadingOverlay').classList.remove('active');
+        }
+    }
+
+    // Apply edit button handler for editor modal
+    document.getElementById('applyEdit')?.addEventListener('click', async () => {
+        if (!window.editorModal) return;
+
+        const canvas = window.editorModal.getCroppedCanvas();
+        if (!canvas) {
+            alert('Brak edycji do zastosowania');
+            return;
+        }
+
+        document.getElementById('loadingOverlay').classList.add('active');
+
+        canvas.toBlob(async (blob) => {
+            const formData = new FormData();
+            formData.append('image', blob, 'edited.jpg');
+
+            try {
+                const res = await fetch(`/i/${imageSlug}/replace?edit=${editToken}`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (res.ok) {
+                    location.reload();
+                } else {
+                    alert('Błąd zastosowania edycji');
+                }
+            } catch (err) {
+                alert('Błąd połączenia: ' + err.message);
+            } finally {
+                document.getElementById('loadingOverlay').classList.remove('active');
+            }
+        }, 'image/jpeg', 0.95);
+    });
     </script>
 </body>
 </html>
