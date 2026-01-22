@@ -269,32 +269,36 @@
             display: none;
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.9);
+            background: #111;
             z-index: 1000;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
         }
         .editor-modal.active {
             display: flex;
         }
         .editor-modal-content {
-            width: 80%;
-            max-width: 1200px;
-            max-height: 90vh;
-            background: #1a1a1a;
-            border-radius: 12px;
-            padding: 20px;
+            width: 100%;
+            height: 100%;
+            background: #111;
+            padding: 15px;
             display: flex;
             flex-direction: column;
         }
         .editor-modal-content .editor-toolbar {
-            margin-bottom: 15px;
+            margin-bottom: 10px;
+            flex-shrink: 0;
         }
         .editor-modal-content .editor-canvas-wrap {
             flex: 1;
-            max-height: calc(90vh - 150px);
-            overflow: hidden;
+            min-height: 0;
+            max-width: none;
+            max-height: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .editor-modal-content .cropper-container {
+            max-width: 95% !important;
+            max-height: 95% !important;
         }
     </style>
 </head>
@@ -541,25 +545,40 @@
 
         function loadEditorImage(dataUrl) {
             destroyEditor();
-            editorImage.src = dataUrl;
-            editorImage.onload = () => {
-                cropper = new Cropper(editorImage, {
-                    viewMode: 2,
-                    autoCropArea: 1,
-                    background: false,
-                    responsive: true,
-                    checkOrientation: true,
-                    ready() {
-                        editorModal.classList.add('active');
-                        setAspectRatio(NaN);
-                        saveState();
-                        updateEditorUI();
-                    },
-                    crop() {
-                        updateEditorUI();
-                    }
-                });
-            };
+            // Najpierw pokaż modal żeby mieć wymiary kontenera
+            editorModal.classList.add('active');
+
+            // Poczekaj na renderowanie
+            requestAnimationFrame(() => {
+                const wrap = document.getElementById('editorCanvasWrap');
+                const availableW = wrap.clientWidth * 0.95;
+                const availableH = wrap.clientHeight * 0.95;
+
+                // Ustaw max wymiary obrazka
+                editorImage.style.maxWidth = availableW + 'px';
+                editorImage.style.maxHeight = availableH + 'px';
+
+                editorImage.src = dataUrl;
+                editorImage.onload = () => {
+                    cropper = new Cropper(editorImage, {
+                        viewMode: 2,
+                        autoCropArea: 1,
+                        background: false,
+                        responsive: true,
+                        checkOrientation: true,
+                        minContainerWidth: availableW,
+                        minContainerHeight: availableH,
+                        ready() {
+                            setAspectRatio(NaN);
+                            saveState();
+                            updateEditorUI();
+                        },
+                        crop() {
+                            updateEditorUI();
+                        }
+                    });
+                };
+            });
         }
 
         function closeEditor() {
