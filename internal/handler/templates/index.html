@@ -16,7 +16,7 @@
             padding: 0;
         }
         .container {
-            max-width: 80%;
+            max-width: 60%;
             width: 100%;
             margin: 0 auto;
             padding: 20px;
@@ -244,8 +244,8 @@
         }
         .editor-canvas-wrap {
             width: 100%;
-            max-width: 600px;
-            max-height: 420px;
+            max-width: 900px;
+            max-height: 600px;
             background: #0a0a0a;
             border-radius: 8px;
             overflow: hidden;
@@ -299,27 +299,27 @@
 
             <div class="editor-container" id="editorContainer">
                 <div class="editor-toolbar">
-                    <button id="editorUndo" disabled title="Cofnij (Ctrl+Z)">↶ Cofnij</button>
-                    <button id="editorRedo" disabled title="Ponów (Ctrl+Y)">↷ Ponów</button>
+                    <button type="button" id="editorUndo" disabled title="Cofnij (Ctrl+Z)">↶ Cofnij</button>
+                    <button type="button" id="editorRedo" disabled title="Ponów (Ctrl+Y)">↷ Ponów</button>
                     <div class="separator"></div>
                     <div class="group">
-                        <button id="editorRotateL" title="Obróć -90°">↺</button>
-                        <button id="editorRotateR" title="Obróć +90°">↻</button>
-                        <button id="editorFlipH" title="Odbij poziomo">⇆</button>
-                        <button id="editorFlipV" title="Odbij pionowo">⇅</button>
+                        <button type="button" id="editorRotateL" title="Obróć -90°">↺</button>
+                        <button type="button" id="editorRotateR" title="Obróć +90°">↻</button>
+                        <button type="button" id="editorFlipH" title="Odbij poziomo">⇆</button>
+                        <button type="button" id="editorFlipV" title="Odbij pionowo">⇅</button>
                     </div>
                     <div class="separator"></div>
                     <div class="group">
-                        <button id="aspectFree" class="active">Free</button>
-                        <button id="aspect1x1">1:1</button>
-                        <button id="aspect16x9">16:9</button>
-                        <button id="aspect4x3">4:3</button>
+                        <button type="button" id="aspectFree" class="active">Free</button>
+                        <button type="button" id="aspect1x1">1:1</button>
+                        <button type="button" id="aspect16x9">16:9</button>
+                        <button type="button" id="aspect4x3">4:3</button>
                     </div>
                     <div class="separator"></div>
-                    <button id="editorReset" title="Resetuj wszystko">⟲ Reset</button>
+                    <button type="button" id="editorReset" title="Resetuj wszystko">⟲ Reset</button>
                     <div class="separator"></div>
-                    <button id="applyEdit" style="background: #4a9eff; color: white;">✓ Zastosuj</button>
-                    <button id="cancelEdit">✕ Anuluj</button>
+                    <button type="button" id="applyEdit" style="background: #4a9eff; color: white;">✓ Zastosuj</button>
+                    <button type="button" id="cancelEdit">✕ Anuluj</button>
                 </div>
                 <div class="editor-canvas-wrap" id="editorCanvasWrap">
                     <img id="editorImage" src="" alt="Edit">
@@ -471,7 +471,7 @@
                 editorImage.onload = () => {
                     console.log('editorImage loaded, creating Cropper');
                     cropper = new Cropper(editorImage, {
-                    viewMode: 1,
+                    viewMode: 2,
                     autoCropArea: 1,
                     background: false,
                     responsive: true,
@@ -523,7 +523,7 @@
             editorImage.src = dataUrl;
             editorImage.onload = () => {
                 cropper = new Cropper(editorImage, {
-                    viewMode: 1,
+                    viewMode: 2,
                     autoCropArea: 1,
                     background: false,
                     responsive: true,
@@ -680,19 +680,23 @@
                 img.onload = () => URL.revokeObjectURL(img.src);
 
                 const editBtn = document.createElement('button');
+                editBtn.type = 'button';
                 editBtn.className = 'btn-edit';
                 editBtn.innerHTML = '✏️';
                 editBtn.title = 'Edytuj';
                 editBtn.onclick = (e) => {
+                    e.preventDefault();
                     e.stopPropagation();
                     openEditorForFile(index);
                 };
 
                 const deleteBtn = document.createElement('button');
+                deleteBtn.type = 'button';
                 deleteBtn.className = 'btn-delete';
                 deleteBtn.innerHTML = '✕';
                 deleteBtn.title = 'Usuń';
                 deleteBtn.onclick = (e) => {
+                    e.preventDefault();
                     e.stopPropagation();
                     removeFile(index);
                 };
@@ -823,10 +827,10 @@
                 if (res.ok) {
                     const data = await res.json();
                     // Przekieruj do strony obrazka lub galerii
-                    if (data.slug) {
-                        window.location.href = `/i/${data.slug}`;
-                    } else if (data.gallery_slug) {
-                        window.location.href = `/g/${data.gallery_slug}`;
+                    if (data.url) {
+                        window.location.href = data.url;
+                    } else if (data.slug) {
+                        window.location.href = isSingleUpload ? `/i/${data.slug}` : `/g/${data.slug}`;
                     }
                 } else {
                     alert('Błąd uploadu');
