@@ -11,6 +11,7 @@ services:
       - CLEANUP_TARGET_GB=45
       - LOG_DIR=/data/logs
       - CACHE_DIR=/cache
+      - PUBLIC_UPLOAD=true
       # Brat SSO
       - BRAT_HASH_SECRET=70bea0d8db1666ebb2c0aef1a820be13d8274dca73843935336f2dbb0e2f4f7e
       - BRAT_ENCRYPTION_KEY=8d29fa415eda466a6e54d2843b5d219295de5fe9c5a52330c88a9f9b7107b0e4
