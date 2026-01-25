@@ -9,6 +9,8 @@ services:
       - MAX_FILE_SIZE_MB=20
       - MAX_DISK_GB=50
       - CLEANUP_TARGET_GB=45
+      - LOG_DIR=/data/logs
+      - CACHE_DIR=/cache
       # Brat SSO
       - BRAT_HASH_SECRET=70bea0d8db1666ebb2c0aef1a820be13d8274dca73843935336f2dbb0e2f4f7e
       - BRAT_ENCRYPTION_KEY=8d29fa415eda466a6e54d2843b5d219295de5fe9c5a52330c88a9f9b7107b0e4
@@ -20,6 +22,7 @@ services:
       - BRAT_MAX_PSEUDONIM_BYTES=255
     volumes:
       - ./data:/data
+      - dajtu-cache:/cache
     networks:
       - web
     restart: unless-stopped
@@ -28,6 +31,9 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
+
+volumes:
+  dajtu-cache:
 
 networks:
   web:
