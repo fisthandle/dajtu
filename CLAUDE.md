@@ -42,6 +42,8 @@ go build -o dajtu ./cmd/dajtu && ./dajtu
 | `MAX_DISK_GB` | 50 | Limit dysku (wyzwala cleanup) |
 | `CLEANUP_TARGET_GB` | 45 | Cel po cleanup |
 | `KEEP_ORIGINAL_FORMAT` | true | Zachowaj oryginał oprócz WebP |
+| `LOG_DIR` | ./data/logs | Katalog logów |
+| `CACHE_DIR` | /tmp/dajtu-cache | Katalog cache obrazków (on-demand) |
 
 ### Access Control
 
@@ -65,13 +67,23 @@ go build -o dajtu ./cmd/dajtu && ./dajtu
 
 Format: **WebP** (quality 90, thumb 85)
 
+### Przy uploading (statyczne)
+
 | Rozmiar | Szerokość | Użycie |
 |---------|-----------|--------|
 | `original` | max 4096px | pełna jakość |
-| `1920` | 1920px | desktop |
-| `800` | 800px | mobile |
-| `200` | 200px | lista/grid |
-| `thumb` | 100x100px | miniatura (crop) |
+| `thumb` | 200x200px | miniatura (crop) |
+
+### On-demand (dynamiczne + cache)
+
+| Rozmiar | Szerokość |
+|---------|-----------|
+| `800` | 800px |
+| `1200` | 1200px |
+| `1600` | 1600px |
+| `2400` | 2400px |
+
+Dynamiczne rozmiary generowane przy pierwszym request i cache'owane w docker volume `dajtu-cache`.
 
 **Oryginał:** jeśli `KEEP_ORIGINAL_FORMAT=true`, zachowuje też plik w oryginalnym formacie (JPG/PNG/GIF)
 
@@ -80,10 +92,11 @@ Format: **WebP** (quality 90, thumb 85)
 ```
 https://dajtu.com/i/{slug}           # podgląd HTML
 https://dajtu.com/i/{slug}/original  # WebP pełny
-https://dajtu.com/i/{slug}/1920      # WebP 1920px
-https://dajtu.com/i/{slug}/800       # WebP 800px
-https://dajtu.com/i/{slug}/200       # WebP 200px
-https://dajtu.com/i/{slug}/thumb     # WebP 100x100
+https://dajtu.com/i/{slug}/800       # WebP 800px (on-demand)
+https://dajtu.com/i/{slug}/1200      # WebP 1200px (on-demand)
+https://dajtu.com/i/{slug}/1600      # WebP 1600px (on-demand)
+https://dajtu.com/i/{slug}/2400      # WebP 2400px (on-demand)
+https://dajtu.com/i/{slug}/thumb     # WebP 200x200
 ```
 
 Slug: 5-znakowy hash (np. `ab1c2`)
@@ -131,30 +144,54 @@ config/.env      # właściwy plik z konfiguracją (gitignored)
 
 ## Logi
 
-Aplikacja używa standardowego `log` package (stderr).
+Structured logging do plików + stdout (dual output).
 
-**Lokalnie:** logi widoczne w terminalu gdzie uruchomiono `./dajtu`
+**Lokalizacja:** `data/logs/{YY.MM}_{category}.log`
 
-**Staging:** `docker logs dajtu_app --tail 100 -f`
+**Kategorie:**
+- `app` - główny logger aplikacji
+- `requests` - HTTP requesty (method, path, status, duration)
+- `cache` - cache hit/miss
+- `image` - operacje resize
+- `upload` - uploady plików
+
+**Rotacja:** miesięczna (po nazwie pliku)
+
+### Komendy
 
 ```bash
-# Filtrowanie błędów
-ssh staging "docker logs dajtu_app 2>&1 | grep -i error"
+# Docker logs (stdout)
+ssh staging "docker logs dajtu_app --tail 100 -f"
 
-# Logi z ostatniej godziny
-ssh staging "docker logs dajtu_app --since 1h"
+# Pliki logów
+ssh staging "ls -la /var/www/dajtu/data/logs/"
+ssh staging "tail -100 /var/www/dajtu/data/logs/26.01_requests.log"
 ```
 
-### TODO: Logi do pliku
-Rozważyć przekierowanie stderr do `data/logs/` przy deployu:
-- Rotacja logów (dzienne pliki lub max rozmiar)
-- Łatwiejsze przeszukiwanie historii
-- Opcja: slog (Go stdlib) dla structured logging (JSON)
+### Panel admina
+
+Logi dostępne w `/admin/logs`
 
 ## Troubleshooting
 
 ### CORS blokuje requesty z lokalnego dev
 Ustaw `ALLOWED_ORIGINS=` (pusty) lub zakomentuj w docker-compose.yml - wtedy przepuści wszystkie origin
+
+### Logi nie zapisują się do plików
+Aplikacja w kontenerze działa jako user `dajtu` (uid 999). Katalog `data/logs/` musi mieć odpowiednie uprawnienia:
+```bash
+ssh staging "sudo chown -R 999:999 /var/www/dajtu/data/logs"
+```
+
+### Cache nie działa
+Cache jest w docker volume `dajtu-cache`. Sprawdź czy volume istnieje:
+```bash
+ssh staging "docker volume ls | grep dajtu"
+```
+Cleanup cache (codziennie o 4:00 przez systemd timer):
+```bash
+ssh staging "systemctl status dajtu-cache-cleanup.timer"
+```
 
 ## Backup
 
