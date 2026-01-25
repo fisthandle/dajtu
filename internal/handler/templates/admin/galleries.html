@@ -1,18 +1,93 @@
 {{define "title"}}Galerie - Admin dajtu{{end}}
 {{define "content"}}
-    <h1>Galerie <span>({{len .}})</span></h1>
-    <table>
-        <tr><th>ID</th><th>Tytuł</th><th>Właściciel</th><th>Zdjęć</th><th>Utworzona</th><th>Akcje</th></tr>
-        {{range .}}
+    <h1>Galerie <span>({{.Total}})</span></h1>
+    <div class="filters">
+        <form method="GET" action="/admin/galleries" data-autosubmit>
+            <input type="hidden" name="page" value="1">
+            <input type="hidden" name="limit" value="{{.PerPage}}">
+            <input type="hidden" name="sort" value="{{.Sort}}">
+            <input type="hidden" name="dir" value="{{.Dir}}">
+            <label>
+                Filtr
+                <input type="text" name="q" value="{{.Query}}" placeholder="tytuł, slug, właściciel">
+            </label>
+        </form>
+    </div>
+    <div class="pagination">
+        {{if .HasPrev}}
+            <a href="/admin/galleries?page=1&limit={{.PerPage}}&sort={{.Sort}}&dir={{.Dir}}&q={{urlquery .Query}}">« Pierwsza</a>
+            <a href="/admin/galleries?page={{.PrevPage}}&limit={{.PerPage}}&sort={{.Sort}}&dir={{.Dir}}&q={{urlquery .Query}}">‹ Poprzednia</a>
+        {{else}}
+            <span class="disabled">« Pierwsza</span>
+            <span class="disabled">‹ Poprzednia</span>
+        {{end}}
+
+        <form method="GET" action="/admin/galleries" class="pager-form">
+            <input type="hidden" name="page" value="1">
+            <input type="hidden" name="sort" value="{{.Sort}}">
+            <input type="hidden" name="dir" value="{{.Dir}}">
+            <input type="hidden" name="q" value="{{.Query}}">
+            <label>
+                Limit
+                <select name="limit" onchange="this.form.submit()">
+                    <option value="50" {{if eq .PerPage 50}}selected{{end}}>50</option>
+                    <option value="100" {{if eq .PerPage 100}}selected{{end}}>100</option>
+                    <option value="200" {{if eq .PerPage 200}}selected{{end}}>200</option>
+                    <option value="300" {{if eq .PerPage 300}}selected{{end}}>300</option>
+                    <option value="500" {{if eq .PerPage 500}}selected{{end}}>500</option>
+                </select>
+            </label>
+        </form>
+
+        <form method="GET" action="/admin/galleries" class="pager-form">
+            <label>
+                Strona
+                <input type="number" name="page" min="1" max="{{.TotalPages}}" value="{{.Page}}">
+            </label>
+            <input type="hidden" name="limit" value="{{.PerPage}}">
+            <input type="hidden" name="sort" value="{{.Sort}}">
+            <input type="hidden" name="dir" value="{{.Dir}}">
+            <input type="hidden" name="q" value="{{.Query}}">
+            <button type="submit">Idź</button>
+        </form>
+
+        {{range .Pages}}
+            {{if eq . $.Page}}
+                <span class="current">{{.}}</span>
+            {{else}}
+                <a href="/admin/galleries?page={{.}}&limit={{$.PerPage}}&sort={{$.Sort}}&dir={{$.Dir}}&q={{urlquery $.Query}}">{{.}}</a>
+            {{end}}
+        {{end}}
+
+        {{if .HasNext}}
+            <a href="/admin/galleries?page={{.NextPage}}&limit={{.PerPage}}&sort={{.Sort}}&dir={{.Dir}}&q={{urlquery .Query}}">Następna ›</a>
+            <a href="/admin/galleries?page={{.TotalPages}}&limit={{.PerPage}}&sort={{.Sort}}&dir={{.Dir}}&q={{urlquery .Query}}">Ostatnia »</a>
+        {{else}}
+            <span class="disabled">Następna ›</span>
+            <span class="disabled">Ostatnia »</span>
+        {{end}}
+    </div>
+    <table class="admin-table">
+        <tr>
+            <th class="col-id">ID</th>
+            <th class="col-name"><a href="{{index .SortLinks "title"}}">Tytuł{{if eq .Sort "title"}} {{if eq .Dir "asc"}}↑{{else}}↓{{end}}{{end}}</a></th>
+            <th class="col-owner">Właściciel</th>
+            <th class="col-count"><a href="{{index .SortLinks "images"}}">Zdjęć{{if eq .Sort "images"}} {{if eq .Dir "asc"}}↑{{else}}↓{{end}}{{end}}</a></th>
+            <th class="col-last"><a href="{{index .SortLinks "created"}}">Utworzona{{if eq .Sort "created"}} {{if eq .Dir "asc"}}↑{{else}}↓{{end}}{{end}}</a></th>
+            <th class="col-actions">Akcje</th>
+        </tr>
+        {{range .Galleries}}
         <tr>
             <td>{{.ID}}</td>
-            <td>
-                <a href="/g/{{.Slug}}" target="_blank">{{if .Title}}{{.Title}}{{else}}(bez tytułu){{end}}</a>
-                <a href="/admin/galleries/{{.Slug}}" class="adm">[ADM]</a>
+            <td class="col-name">
+                <span class="cell-stack">
+                    <span class="truncate" title="{{if .Title}}{{.Title}}{{else}}(bez tytułu){{end}}"><a href="/g/{{.Slug}}" target="_blank">{{if .Title}}{{.Title}}{{else}}(bez tytułu){{end}}</a></span>
+                    <a href="/admin/galleries/{{.Slug}}" class="adm">[ADM]</a>
+                </span>
             </td>
-            <td>{{if .OwnerSlug}}<a href="/u/{{.OwnerSlug}}">{{.OwnerName}}</a> <a href="/admin/users/{{.OwnerSlug}}" class="adm">[ADM]</a>{{else}}-{{end}}</td>
-            <td>{{.ImageCount}}</td>
-            <td>{{formatDate .CreatedAt}}</td>
+            <td class="col-owner">{{if .OwnerSlug}}<span class="cell-stack"><a href="/u/{{.OwnerSlug}}">{{.OwnerName}}</a><a href="/admin/users/{{.OwnerSlug}}" class="adm">[ADM]</a></span>{{else}}-{{end}}</td>
+            <td class="col-count">{{.ImageCount}}</td>
+            <td class="col-last">{{formatDate .CreatedAt}}</td>
             <td>
                 <form method="POST" action="/admin/galleries/{{.ID}}/delete" style="display:inline" onsubmit="return confirm('Usunąć galerię ze wszystkimi zdjęciami?')">
                     <button class="btn-delete">Usuń</button>
@@ -23,5 +98,59 @@
         <tr><td colspan="6" style="color:#666;">Brak galerii</td></tr>
         {{end}}
     </table>
+    <div class="pagination">
+        {{if .HasPrev}}
+            <a href="/admin/galleries?page=1&limit={{.PerPage}}&sort={{.Sort}}&dir={{.Dir}}&q={{urlquery .Query}}">« Pierwsza</a>
+            <a href="/admin/galleries?page={{.PrevPage}}&limit={{.PerPage}}&sort={{.Sort}}&dir={{.Dir}}&q={{urlquery .Query}}">‹ Poprzednia</a>
+        {{else}}
+            <span class="disabled">« Pierwsza</span>
+            <span class="disabled">‹ Poprzednia</span>
+        {{end}}
+
+        <form method="GET" action="/admin/galleries" class="pager-form">
+            <input type="hidden" name="page" value="1">
+            <input type="hidden" name="sort" value="{{.Sort}}">
+            <input type="hidden" name="dir" value="{{.Dir}}">
+            <input type="hidden" name="q" value="{{.Query}}">
+            <label>
+                Limit
+                <select name="limit" onchange="this.form.submit()">
+                    <option value="50" {{if eq .PerPage 50}}selected{{end}}>50</option>
+                    <option value="100" {{if eq .PerPage 100}}selected{{end}}>100</option>
+                    <option value="200" {{if eq .PerPage 200}}selected{{end}}>200</option>
+                    <option value="300" {{if eq .PerPage 300}}selected{{end}}>300</option>
+                    <option value="500" {{if eq .PerPage 500}}selected{{end}}>500</option>
+                </select>
+            </label>
+        </form>
+
+        <form method="GET" action="/admin/galleries" class="pager-form">
+            <label>
+                Strona
+                <input type="number" name="page" min="1" max="{{.TotalPages}}" value="{{.Page}}">
+            </label>
+            <input type="hidden" name="limit" value="{{.PerPage}}">
+            <input type="hidden" name="sort" value="{{.Sort}}">
+            <input type="hidden" name="dir" value="{{.Dir}}">
+            <input type="hidden" name="q" value="{{.Query}}">
+            <button type="submit">Idź</button>
+        </form>
+
+        {{range .Pages}}
+            {{if eq . $.Page}}
+                <span class="current">{{.}}</span>
+            {{else}}
+                <a href="/admin/galleries?page={{.}}&limit={{$.PerPage}}&sort={{$.Sort}}&dir={{$.Dir}}&q={{urlquery $.Query}}">{{.}}</a>
+            {{end}}
+        {{end}}
+
+        {{if .HasNext}}
+            <a href="/admin/galleries?page={{.NextPage}}&limit={{.PerPage}}&sort={{.Sort}}&dir={{.Dir}}&q={{urlquery .Query}}">Następna ›</a>
+            <a href="/admin/galleries?page={{.TotalPages}}&limit={{.PerPage}}&sort={{.Sort}}&dir={{.Dir}}&q={{urlquery .Query}}">Ostatnia »</a>
+        {{else}}
+            <span class="disabled">Następna ›</span>
+            <span class="disabled">Ostatnia »</span>
+        {{end}}
+    </div>
 {{end}}
 {{template "admin_base" .}}

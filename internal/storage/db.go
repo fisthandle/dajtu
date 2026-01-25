@@ -810,12 +810,41 @@ func (db *DB) GetStats() (*Stats, error) {
 }
 
 func (db *DB) ListUsers(limit, offset int) ([]*User, error) {
+	return db.ListUsersSortedFiltered(limit, offset, "created", "desc", "")
+}
+
+func (db *DB) ListUsersSortedFiltered(limit, offset int, sort, dir, query string) ([]*User, error) {
+	orderBy := "created_at"
+	switch sort {
+	case "name":
+		orderBy = "display_name"
+	case "slug":
+		orderBy = "slug"
+	case "created":
+		orderBy = "created_at"
+	default:
+		orderBy = "created_at"
+	}
+	orderDir := "DESC"
+	if dir == "asc" {
+		orderDir = "ASC"
+	}
+
+	where := ""
+	args := []any{}
+	if query != "" {
+		like := "%" + query + "%"
+		where = "WHERE (display_name LIKE ? OR slug LIKE ?)"
+		args = append(args, like, like)
+	}
+
 	rows, err := db.conn.Query(`
 		SELECT id, slug, display_name, created_at, COALESCE(updated_at, created_at)
 		FROM users
-		ORDER BY created_at DESC
+		`+where+`
+		ORDER BY `+orderBy+` `+orderDir+`, id `+orderDir+`
 		LIMIT ? OFFSET ?
-	`, limit, offset)
+	`, append(args, limit, offset)...)
 	if err != nil {
 		return nil, err
 	}
@@ -830,6 +859,21 @@ func (db *DB) ListUsers(limit, offset int) ([]*User, error) {
 		users = append(users, u)
 	}
 	return users, rows.Err()
+}
+
+func (db *DB) CountUsersFiltered(query string) (int, error) {
+	where := ""
+	args := []any{}
+	if query != "" {
+		like := "%" + query + "%"
+		where = "WHERE (display_name LIKE ? OR slug LIKE ?)"
+		args = append(args, like, like)
+	}
+	var total int
+	if err := db.conn.QueryRow(`SELECT COUNT(*) FROM users `+where, args...).Scan(&total); err != nil {
+		return 0, err
+	}
+	return total, nil
 }
 
 // GenerateUniqueSlug generuje unikalny slug dla tabeli
@@ -856,6 +900,34 @@ func (db *DB) GenerateUniqueSlug(table string, length int) string {
 }
 
 func (db *DB) ListGalleriesAdmin(limit, offset int) ([]*GalleryAdmin, error) {
+	return db.ListGalleriesAdminSortedFiltered(limit, offset, "created", "desc", "")
+}
+
+func (db *DB) ListGalleriesAdminSortedFiltered(limit, offset int, sort, dir, query string) ([]*GalleryAdmin, error) {
+	orderBy := "g.created_at"
+	switch sort {
+	case "title":
+		orderBy = "g.title"
+	case "images":
+		orderBy = "image_count"
+	case "created":
+		orderBy = "g.created_at"
+	default:
+		orderBy = "g.created_at"
+	}
+	orderDir := "DESC"
+	if dir == "asc" {
+		orderDir = "ASC"
+	}
+
+	where := ""
+	args := []any{}
+	if query != "" {
+		like := "%" + query + "%"
+		where = "WHERE (COALESCE(g.title, '') LIKE ? OR g.slug LIKE ? OR COALESCE(u.display_name, '') LIKE ? OR COALESCE(u.slug, '') LIKE ?)"
+		args = append(args, like, like, like, like)
+	}
+
 	rows, err := db.conn.Query(`
 		SELECT g.id, g.slug, g.title, g.user_id, g.created_at,
 		       COUNT(i.id) as image_count,
@@ -864,10 +936,11 @@ func (db *DB) ListGalleriesAdmin(limit, offset int) ([]*GalleryAdmin, error) {
 		FROM galleries g
 		LEFT JOIN images i ON i.gallery_id = g.id
 		LEFT JOIN users u ON u.id = g.user_id
+		`+where+`
 		GROUP BY g.id
-		ORDER BY g.created_at DESC
+		ORDER BY `+orderBy+` `+orderDir+`, g.id `+orderDir+`
 		LIMIT ? OFFSET ?
-	`, limit, offset)
+	`, append(args, limit, offset)...)
 	if err != nil {
 		return nil, err
 	}
@@ -882,6 +955,25 @@ func (db *DB) ListGalleriesAdmin(limit, offset int) ([]*GalleryAdmin, error) {
 		galleries = append(galleries, g)
 	}
 	return galleries, rows.Err()
+}
+
+func (db *DB) CountGalleriesAdminFiltered(query string) (int, error) {
+	where := ""
+	args := []any{}
+	if query != "" {
+		like := "%" + query + "%"
+		where = "WHERE (COALESCE(g.title, '') LIKE ? OR g.slug LIKE ? OR COALESCE(u.display_name, '') LIKE ? OR COALESCE(u.slug, '') LIKE ?)"
+		args = append(args, like, like, like, like)
+	}
+	var total int
+	if err := db.conn.QueryRow(`
+		SELECT COUNT(*)
+		FROM galleries g
+		LEFT JOIN users u ON u.id = g.user_id
+		`+where, args...).Scan(&total); err != nil {
+		return 0, err
+	}
+	return total, nil
 }
 
 func (db *DB) GetImagesByGallery(galleryID int64) ([]*Image, error) {
@@ -908,6 +1000,41 @@ func (db *DB) DeleteGalleryByID(id int64) error {
 }
 
 func (db *DB) ListImagesAdmin(limit, offset int) ([]*ImageAdmin, error) {
+	return db.ListImagesAdminSortedFiltered(limit, offset, "created", "desc", "")
+}
+
+func (db *DB) ListImagesAdminSorted(limit, offset int, sort, dir string) ([]*ImageAdmin, error) {
+	return db.ListImagesAdminSortedFiltered(limit, offset, sort, dir, "")
+}
+
+func (db *DB) ListImagesAdminSortedFiltered(limit, offset int, sort, dir, query string) ([]*ImageAdmin, error) {
+	orderBy := "i.created_at"
+	switch sort {
+	case "downloads":
+		orderBy = "i.downloads"
+	case "accessed":
+		orderBy = "i.accessed_at"
+	case "size":
+		orderBy = "i.file_size"
+	case "created":
+		orderBy = "i.created_at"
+	default:
+		orderBy = "i.created_at"
+	}
+
+	orderDir := "DESC"
+	if dir == "asc" {
+		orderDir = "ASC"
+	}
+
+	where := ""
+	args := []any{}
+	if query != "" {
+		like := "%" + query + "%"
+		where = "WHERE (i.original_name LIKE ? OR COALESCE(u.display_name, '') LIKE ? OR COALESCE(u.slug, '') LIKE ? OR COALESCE(g.slug, '') LIKE ?)"
+		args = append(args, like, like, like, like)
+	}
+
 	rows, err := db.conn.Query(`
 		SELECT i.id, i.slug, i.original_name, i.file_size, i.downloads, i.created_at, i.accessed_at, i.edited,
 		       COALESCE(u.display_name, '') as owner_name,
@@ -916,9 +1043,10 @@ func (db *DB) ListImagesAdmin(limit, offset int) ([]*ImageAdmin, error) {
 		FROM images i
 		LEFT JOIN users u ON u.id = i.user_id
 		LEFT JOIN galleries g ON g.id = i.gallery_id
-		ORDER BY i.created_at DESC
+		`+where+`
+		ORDER BY `+orderBy+` `+orderDir+`, i.id `+orderDir+`
 		LIMIT ? OFFSET ?
-	`, limit, offset)
+	`, append(args, limit, offset)...)
 	if err != nil {
 		return nil, err
 	}
@@ -933,6 +1061,34 @@ func (db *DB) ListImagesAdmin(limit, offset int) ([]*ImageAdmin, error) {
 		images = append(images, img)
 	}
 	return images, rows.Err()
+}
+
+func (db *DB) CountImagesAdmin() (int, error) {
+	var total int
+	if err := db.conn.QueryRow(`SELECT COUNT(*) FROM images`).Scan(&total); err != nil {
+		return 0, err
+	}
+	return total, nil
+}
+
+func (db *DB) CountImagesAdminFiltered(query string) (int, error) {
+	where := ""
+	args := []any{}
+	if query != "" {
+		like := "%" + query + "%"
+		where = "WHERE (i.original_name LIKE ? OR COALESCE(u.display_name, '') LIKE ? OR COALESCE(u.slug, '') LIKE ? OR COALESCE(g.slug, '') LIKE ?)"
+		args = append(args, like, like, like, like)
+	}
+	var total int
+	if err := db.conn.QueryRow(`
+		SELECT COUNT(*)
+		FROM images i
+		LEFT JOIN users u ON u.id = i.user_id
+		LEFT JOIN galleries g ON g.id = i.gallery_id
+		`+where, args...).Scan(&total); err != nil {
+		return 0, err
+	}
+	return total, nil
 }
 
 func (db *DB) GetImageByID(id int64) (*Image, error) {

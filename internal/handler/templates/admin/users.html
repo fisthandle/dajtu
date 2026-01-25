@@ -1,21 +1,148 @@
 {{define "title"}}Użytkownicy - Admin dajtu{{end}}
 {{define "content"}}
-    <h1>Użytkownicy <span>({{len .}})</span></h1>
-    <table>
-        <tr><th>ID</th><th>Nick</th><th>Slug</th><th>Utworzony</th></tr>
-        {{range .}}
+    <h1>Użytkownicy <span>({{.Total}})</span></h1>
+    <div class="filters">
+        <form method="GET" action="/admin/users" data-autosubmit>
+            <input type="hidden" name="page" value="1">
+            <input type="hidden" name="limit" value="{{.PerPage}}">
+            <input type="hidden" name="sort" value="{{.Sort}}">
+            <input type="hidden" name="dir" value="{{.Dir}}">
+            <label>
+                Filtr
+                <input type="text" name="q" value="{{.Query}}" placeholder="nick lub slug">
+            </label>
+        </form>
+    </div>
+    <div class="pagination">
+        {{if .HasPrev}}
+            <a href="/admin/users?page=1&limit={{.PerPage}}&sort={{.Sort}}&dir={{.Dir}}&q={{urlquery .Query}}">« Pierwsza</a>
+            <a href="/admin/users?page={{.PrevPage}}&limit={{.PerPage}}&sort={{.Sort}}&dir={{.Dir}}&q={{urlquery .Query}}">‹ Poprzednia</a>
+        {{else}}
+            <span class="disabled">« Pierwsza</span>
+            <span class="disabled">‹ Poprzednia</span>
+        {{end}}
+
+        <form method="GET" action="/admin/users" class="pager-form">
+            <input type="hidden" name="page" value="1">
+            <input type="hidden" name="sort" value="{{.Sort}}">
+            <input type="hidden" name="dir" value="{{.Dir}}">
+            <input type="hidden" name="q" value="{{.Query}}">
+            <label>
+                Limit
+                <select name="limit" onchange="this.form.submit()">
+                    <option value="50" {{if eq .PerPage 50}}selected{{end}}>50</option>
+                    <option value="100" {{if eq .PerPage 100}}selected{{end}}>100</option>
+                    <option value="200" {{if eq .PerPage 200}}selected{{end}}>200</option>
+                    <option value="300" {{if eq .PerPage 300}}selected{{end}}>300</option>
+                    <option value="500" {{if eq .PerPage 500}}selected{{end}}>500</option>
+                </select>
+            </label>
+        </form>
+
+        <form method="GET" action="/admin/users" class="pager-form">
+            <label>
+                Strona
+                <input type="number" name="page" min="1" max="{{.TotalPages}}" value="{{.Page}}">
+            </label>
+            <input type="hidden" name="limit" value="{{.PerPage}}">
+            <input type="hidden" name="sort" value="{{.Sort}}">
+            <input type="hidden" name="dir" value="{{.Dir}}">
+            <input type="hidden" name="q" value="{{.Query}}">
+            <button type="submit">Idź</button>
+        </form>
+
+        {{range .Pages}}
+            {{if eq . $.Page}}
+                <span class="current">{{.}}</span>
+            {{else}}
+                <a href="/admin/users?page={{.}}&limit={{$.PerPage}}&sort={{$.Sort}}&dir={{$.Dir}}&q={{urlquery $.Query}}">{{.}}</a>
+            {{end}}
+        {{end}}
+
+        {{if .HasNext}}
+            <a href="/admin/users?page={{.NextPage}}&limit={{.PerPage}}&sort={{.Sort}}&dir={{.Dir}}&q={{urlquery .Query}}">Następna ›</a>
+            <a href="/admin/users?page={{.TotalPages}}&limit={{.PerPage}}&sort={{.Sort}}&dir={{.Dir}}&q={{urlquery .Query}}">Ostatnia »</a>
+        {{else}}
+            <span class="disabled">Następna ›</span>
+            <span class="disabled">Ostatnia »</span>
+        {{end}}
+    </div>
+    <table class="admin-table">
+        <tr>
+            <th class="col-id">ID</th>
+            <th class="col-name"><a href="{{index .SortLinks "name"}}">Nick{{if eq .Sort "name"}} {{if eq .Dir "asc"}}↑{{else}}↓{{end}}{{end}}</a></th>
+            <th class="col-slug"><a href="{{index .SortLinks "slug"}}">Slug{{if eq .Sort "slug"}} {{if eq .Dir "asc"}}↑{{else}}↓{{end}}{{end}}</a></th>
+            <th class="col-last"><a href="{{index .SortLinks "created"}}">Utworzony{{if eq .Sort "created"}} {{if eq .Dir "asc"}}↑{{else}}↓{{end}}{{end}}</a></th>
+        </tr>
+        {{range .Users}}
         <tr>
             <td>{{.ID}}</td>
-            <td>
-                <a href="/u/{{.Slug}}">{{.DisplayName}}</a>
-                <a href="/admin/users/{{.Slug}}" class="adm">[ADM]</a>
+            <td class="col-name">
+                <span class="cell-stack">
+                    <span class="truncate" title="{{.DisplayName}}"><a href="/u/{{.Slug}}">{{.DisplayName}}</a></span>
+                    <a href="/admin/users/{{.Slug}}" class="adm">[ADM]</a>
+                </span>
             </td>
-            <td>{{.Slug}}</td>
-            <td>{{formatDate .CreatedAt}}</td>
+            <td class="col-slug">{{.Slug}}</td>
+            <td class="col-last">{{formatDate .CreatedAt}}</td>
         </tr>
         {{else}}
         <tr><td colspan="4" style="color:#666;">Brak użytkowników</td></tr>
         {{end}}
     </table>
+    <div class="pagination">
+        {{if .HasPrev}}
+            <a href="/admin/users?page=1&limit={{.PerPage}}&sort={{.Sort}}&dir={{.Dir}}&q={{urlquery .Query}}">« Pierwsza</a>
+            <a href="/admin/users?page={{.PrevPage}}&limit={{.PerPage}}&sort={{.Sort}}&dir={{.Dir}}&q={{urlquery .Query}}">‹ Poprzednia</a>
+        {{else}}
+            <span class="disabled">« Pierwsza</span>
+            <span class="disabled">‹ Poprzednia</span>
+        {{end}}
+
+        <form method="GET" action="/admin/users" class="pager-form">
+            <input type="hidden" name="page" value="1">
+            <input type="hidden" name="sort" value="{{.Sort}}">
+            <input type="hidden" name="dir" value="{{.Dir}}">
+            <input type="hidden" name="q" value="{{.Query}}">
+            <label>
+                Limit
+                <select name="limit" onchange="this.form.submit()">
+                    <option value="50" {{if eq .PerPage 50}}selected{{end}}>50</option>
+                    <option value="100" {{if eq .PerPage 100}}selected{{end}}>100</option>
+                    <option value="200" {{if eq .PerPage 200}}selected{{end}}>200</option>
+                    <option value="300" {{if eq .PerPage 300}}selected{{end}}>300</option>
+                    <option value="500" {{if eq .PerPage 500}}selected{{end}}>500</option>
+                </select>
+            </label>
+        </form>
+
+        <form method="GET" action="/admin/users" class="pager-form">
+            <label>
+                Strona
+                <input type="number" name="page" min="1" max="{{.TotalPages}}" value="{{.Page}}">
+            </label>
+            <input type="hidden" name="limit" value="{{.PerPage}}">
+            <input type="hidden" name="sort" value="{{.Sort}}">
+            <input type="hidden" name="dir" value="{{.Dir}}">
+            <input type="hidden" name="q" value="{{.Query}}">
+            <button type="submit">Idź</button>
+        </form>
+
+        {{range .Pages}}
+            {{if eq . $.Page}}
+                <span class="current">{{.}}</span>
+            {{else}}
+                <a href="/admin/users?page={{.}}&limit={{$.PerPage}}&sort={{$.Sort}}&dir={{$.Dir}}&q={{urlquery $.Query}}">{{.}}</a>
+            {{end}}
+        {{end}}
+
+        {{if .HasNext}}
+            <a href="/admin/users?page={{.NextPage}}&limit={{.PerPage}}&sort={{.Sort}}&dir={{.Dir}}&q={{urlquery .Query}}">Następna ›</a>
+            <a href="/admin/users?page={{.TotalPages}}&limit={{.PerPage}}&sort={{.Sort}}&dir={{.Dir}}&q={{urlquery .Query}}">Ostatnia »</a>
+        {{else}}
+            <span class="disabled">Następna ›</span>
+            <span class="disabled">Ostatnia »</span>
+        {{end}}
+    </div>
 {{end}}
 {{template "admin_base" .}}

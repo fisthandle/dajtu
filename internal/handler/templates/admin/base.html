@@ -7,7 +7,7 @@
     <title>{{block "title" .}}Admin - dajtu{{end}}</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: system-ui, -apple-system, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background: #111; color: #fff; min-height: 100vh; }
+        body { font-family: system-ui, -apple-system, sans-serif; max-width: 1400px; margin: 0 auto; padding: 20px; background: #111; color: #fff; min-height: 100vh; }
         nav { margin-bottom: 20px; padding: 10px 15px; background: #1a1a1a; border: 1px solid #333; border-radius: 8px; display: flex; gap: 15px; align-items: center; }
         nav a { color: #4a9eff; text-decoration: none; }
         nav a:hover { text-decoration: underline; }
@@ -37,6 +37,34 @@
         .summary-stat .value { font-size: 1.5em; color: #4a9eff; font-weight: bold; }
         .summary-stat .label { color: #888; font-size: 0.9em; }
         .public-link { color: #888; font-size: 0.9em; margin-left: 10px; }
+        .pagination { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 15px 0; }
+        .pagination a, .pagination span { padding: 6px 10px; background: #1a1a1a; border: 1px solid #333; border-radius: 6px; text-decoration: none; color: #4a9eff; }
+        .pagination .current { background: #222; color: #fff; border-color: #444; }
+        .pagination .disabled { color: #666; border-color: #333; }
+        .pagination .pager-form { display: inline-flex; align-items: center; gap: 6px; }
+        .pagination label { color: #888; font-size: 0.9em; display: inline-flex; align-items: center; gap: 6px; }
+        .pagination select, .pagination input { background: #111; color: #fff; border: 1px solid #333; border-radius: 4px; padding: 4px 6px; }
+        .pagination button { background: #222; color: #fff; border: 1px solid #333; border-radius: 4px; padding: 4px 8px; cursor: pointer; }
+        .pagination button:hover { border-color: #4a9eff; }
+        th a { color: #888; text-decoration: none; }
+        th a:hover { text-decoration: underline; color: #4a9eff; }
+        .filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 10px 0 15px; }
+        .filters label { color: #888; font-size: 0.9em; display: inline-flex; align-items: center; gap: 6px; }
+        .filters input { background: #111; color: #fff; border: 1px solid #333; border-radius: 4px; padding: 6px 8px; min-width: 260px; }
+        .admin-table { table-layout: fixed; }
+        .col-name { max-width: 400px; }
+        .col-name .truncate { display: block; max-width: 400px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .col-size { width: 90px; white-space: nowrap; }
+        .col-last { width: 140px; white-space: nowrap; }
+        .col-owner, .col-gallery { width: 170px; }
+        .col-thumb { width: 64px; }
+        .col-downloads { width: 90px; white-space: nowrap; }
+        .col-actions { width: 90px; }
+        .col-id { width: 70px; }
+        .col-count { width: 80px; white-space: nowrap; }
+        .col-slug { width: 220px; }
+        .cell-stack { display: inline-flex; flex-direction: column; gap: 2px; }
+        .cell-stack .adm { margin-left: 0; }
     </style>
 </head>
 <body>
@@ -49,6 +77,42 @@
         <a href="/">← Powrót</a>
     </nav>
     {{block "content" .}}{{end}}
+    <script>
+        (function () {
+            var forms = document.querySelectorAll('form[data-autosubmit]');
+            forms.forEach(function (form) {
+                var timer = null;
+                var inputs = form.querySelectorAll('input[type=\"text\"], input[type=\"search\"]');
+                inputs.forEach(function (input) {
+                    input.dataset.lastSubmitValue = input.value || '';
+                    if (input.value) {
+                        setTimeout(function () {
+                            try {
+                                input.focus();
+                                var len = input.value.length;
+                                input.setSelectionRange(len, len);
+                            } catch (e) {
+                                // Ignore focus errors in older browsers.
+                            }
+                        }, 0);
+                    }
+                    input.addEventListener('input', function () {
+                        if (timer) {
+                            clearTimeout(timer);
+                        }
+                        timer = setTimeout(function () {
+                            var current = input.value || '';
+                            if (current === input.dataset.lastSubmitValue) {
+                                return;
+                            }
+                            input.dataset.lastSubmitValue = current;
+                            form.submit();
+                        }, 700);
+                    });
+                });
+            });
+        })();
+    </script>
 </body>
 </html>
 {{end}}
