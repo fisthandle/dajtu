@@ -11,3 +11,5 @@ config/.env.serwer
 .env.local
 **/CLAUDE.md
 !/CLAUDE.md
+config/.env.backup
+.restore-tmp
