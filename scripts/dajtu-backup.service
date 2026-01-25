@@ -1,0 +1,14 @@
+[Unit]
+Description=Dajtu backup to Backblaze B2
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/var/www/dajtu/scripts/backup.sh
+User=root
+Nice=19
+IOSchedulingClass=idle
+
+[Install]
+WantedBy=multi-user.target
