@@ -1031,8 +1031,8 @@ func (db *DB) ListImagesAdminSortedFiltered(limit, offset int, sort, dir, query 
 	args := []any{}
 	if query != "" {
 		like := "%" + query + "%"
-		where = "WHERE (i.original_name LIKE ? OR COALESCE(u.display_name, '') LIKE ? OR COALESCE(u.slug, '') LIKE ? OR COALESCE(g.slug, '') LIKE ?)"
-		args = append(args, like, like, like, like)
+		where = "WHERE (i.original_name LIKE ? OR i.slug LIKE ? OR COALESCE(u.display_name, '') LIKE ? OR COALESCE(u.slug, '') LIKE ? OR COALESCE(g.slug, '') LIKE ?)"
+		args = append(args, like, like, like, like, like)
 	}
 
 	rows, err := db.conn.Query(`
@@ -1076,8 +1076,8 @@ func (db *DB) CountImagesAdminFiltered(query string) (int, error) {
 	args := []any{}
 	if query != "" {
 		like := "%" + query + "%"
-		where = "WHERE (i.original_name LIKE ? OR COALESCE(u.display_name, '') LIKE ? OR COALESCE(u.slug, '') LIKE ? OR COALESCE(g.slug, '') LIKE ?)"
-		args = append(args, like, like, like, like)
+		where = "WHERE (i.original_name LIKE ? OR i.slug LIKE ? OR COALESCE(u.display_name, '') LIKE ? OR COALESCE(u.slug, '') LIKE ? OR COALESCE(g.slug, '') LIKE ?)"
+		args = append(args, like, like, like, like, like)
 	}
 	var total int
 	if err := db.conn.QueryRow(`

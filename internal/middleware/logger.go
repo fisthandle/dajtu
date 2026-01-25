@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"net"
 	"net/http"
 	"strings"
@@ -49,7 +50,7 @@ func (l *RequestLogger) Middleware(next http.Handler) http.Handler {
 			l.traffic.Add(rec.size, time.Now())
 		}
 		ip := clientIP(r)
-		logging.Get("requests").Printf(
+		logLine := fmt.Sprintf(
 			"request method=%s path=%s status=%d bytes=%d ip=%s ua=%q dur_ms=%d",
 			r.Method,
 			r.URL.RequestURI(),
@@ -59,7 +60,23 @@ func (l *RequestLogger) Middleware(next http.Handler) http.Handler {
 			r.UserAgent(),
 			duration.Milliseconds(),
 		)
+		if rec.status >= 400 {
+			logging.Get(fmt.Sprintf("request_%d", rec.status)).Print(logLine)
+			return
+		}
+		if isThumbRequest(r.URL.Path) {
+			logging.Get("requests_thumb").Print(logLine)
+			return
+		}
+		logging.Get("requests").Print(logLine)
 	})
+}
+
+func isThumbRequest(path string) bool {
+	if !strings.HasPrefix(path, "/i/") {
+		return false
+	}
+	return strings.HasSuffix(path, "/thumb") || strings.HasSuffix(path, "/thumb.webp")
 }
 
 func clientIP(r *http.Request) string {
