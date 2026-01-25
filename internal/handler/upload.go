@@ -250,7 +250,7 @@ func NewImageViewHandler(db *storage.DB, cfg *config.Config) *ImageViewHandler {
 
 func (h *ImageViewHandler) ServeHTTP(w http.ResponseWriter, r *http.Request, slug string) {
 	img, err := h.db.GetImageBySlug(slug)
-	if err != nil {
+	if err != nil || img == nil {
 		http.Error(w, "Not found", 404)
 		return
 	}
@@ -287,7 +287,7 @@ type ImageEditHandler struct {
 }
 
 func NewImageEditHandler(db *storage.DB, fs *storage.Filesystem, processor *image.Processor, cfg *config.Config) *ImageEditHandler {
-	tmpl := template.Must(template.ParseFS(templates, "templates/edit_image.html"))
+	tmpl := template.Must(template.ParseFS(templates, "templates/edit_image.html", "templates/partials/*.html"))
 	return &ImageEditHandler{db: db, fs: fs, tmpl: tmpl, processor: processor, cfg: cfg}
 }
 
@@ -355,6 +355,10 @@ func (h *ImageEditHandler) ServeHTTP(w http.ResponseWriter, r *http.Request, slu
 
 	if mode == "new" {
 		newSlug := h.db.GenerateUniqueSlug("images", 5)
+		var userID *int64
+		if user != nil {
+			userID = &user.ID
+		}
 
 		transformParams := parseTransformParams(r)
 		results, err := h.processor.ProcessWithTransform(data, transformParams)
@@ -379,7 +383,7 @@ func (h *ImageEditHandler) ServeHTTP(w http.ResponseWriter, r *http.Request, slu
 			FileSize:     int64(len(data)),
 			Width:        originalResult.Width,
 			Height:       originalResult.Height,
-			UserID:       &user.ID,
+			UserID:       userID,
 			CreatedAt:    time.Now().Unix(),
 			AccessedAt:   time.Now().Unix(),
 			Edited:       true,

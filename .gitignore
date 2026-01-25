@@ -9,3 +9,5 @@ coverage.html
 config/.env
 config/.env.serwer
 .env.local
+**/CLAUDE.md
+!CLAUDE.md
