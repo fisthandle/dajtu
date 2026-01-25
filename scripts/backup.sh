@@ -34,9 +34,10 @@ restic backup \
 # 3. Cleanup starej kopii DB
 rm -f "$DB_BACKUP"
 
-# 4. Retencja: 7 daily, 4 weekly, 3 monthly
+# 4. Retencja: 24 hourly, 7 daily, 4 weekly, 3 monthly
 log "Applying retention policy..."
 restic forget \
+    --keep-hourly 24 \
     --keep-daily 7 \
     --keep-weekly 4 \
     --keep-monthly 3 \
