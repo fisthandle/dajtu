@@ -183,8 +183,12 @@ Aplikacja w kontenerze działa jako user `dajtu` (uid 999). Katalog `data/logs/`
 ssh staging "sudo chown -R 999:999 /var/www/dajtu/data/logs"
 ```
 
-### Cache nie działa
-Cache jest w docker volume `dajtu-cache`. Sprawdź czy volume istnieje:
+### Cache nie działa (write=fail w logach)
+Cache jest w docker volume `dajtu-cache`. Volume musi mieć owner uid 999:
+```bash
+ssh staging "sudo chown -R 999:999 /var/lib/docker/volumes/dajtu_dajtu-cache/_data"
+```
+Sprawdź czy volume istnieje:
 ```bash
 ssh staging "docker volume ls | grep dajtu"
 ```
