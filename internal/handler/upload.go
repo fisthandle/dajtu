@@ -3,7 +3,6 @@ package handler
 import (
 	"encoding/json"
 	"html/template"
-	"log"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -11,6 +10,7 @@ import (
 
 	"dajtu/internal/config"
 	"dajtu/internal/image"
+	"dajtu/internal/logging"
 	"dajtu/internal/middleware"
 	"dajtu/internal/storage"
 )
@@ -84,16 +84,16 @@ func (h *UploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("upload.Create: method=%s content_length=%d", r.Method, r.ContentLength)
+	logging.Get("upload").Printf("upload.Create: method=%s content_length=%d", r.Method, r.ContentLength)
 
 	if !h.cfg.PublicUpload {
 		user := middleware.GetUser(r)
 		if user == nil {
-			log.Printf("upload.Create: public upload disabled, user not logged in")
+			logging.Get("upload").Printf("upload.Create: public upload disabled, user not logged in")
 			jsonError(w, "Obrazy mogą przesyłać tylko zweryfikowani użytkownicy", http.StatusForbidden)
 			return
 		}
-		log.Printf("upload.Create: public upload disabled but user %s is logged in", user.DisplayName)
+		logging.Get("upload").Printf("upload.Create: public upload disabled but user %s is logged in", user.DisplayName)
 	}
 
 	// Limit request body
@@ -101,14 +101,14 @@ func (h *UploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Parse multipart form
 	if err := r.ParseMultipartForm(int64(h.cfg.MaxFileSizeMB) * 1024 * 1024); err != nil {
-		log.Printf("upload.Create: parse error: %v", err)
+		logging.Get("upload").Printf("upload.Create: parse error: %v", err)
 		jsonError(w, "file too large", http.StatusRequestEntityTooLarge)
 		return
 	}
 
 	file, header, err := r.FormFile("file")
 	if err != nil {
-		log.Printf("upload.Create: form file error: %v", err)
+		logging.Get("upload").Printf("upload.Create: form file error: %v", err)
 		jsonError(w, "no file provided", http.StatusBadRequest)
 		return
 	}
@@ -119,16 +119,16 @@ func (h *UploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	format, data, err := image.ValidateAndDetect(file, maxSize)
 	if err != nil {
 		if err == image.ErrInvalidFormat {
-			log.Printf("upload.Create: invalid image format")
+			logging.Get("upload").Printf("upload.Create: invalid image format")
 			jsonError(w, "invalid image format", http.StatusBadRequest)
 			return
 		}
 		if err == image.ErrFileTooLarge {
-			log.Printf("upload.Create: file too large")
+			logging.Get("upload").Printf("upload.Create: file too large")
 			jsonError(w, "file too large", http.StatusRequestEntityTooLarge)
 			return
 		}
-		log.Printf("upload.Create: validation error: %v", err)
+		logging.Get("upload").Printf("upload.Create: validation error: %v", err)
 		jsonError(w, "validation error", http.StatusBadRequest)
 		return
 	}
@@ -140,27 +140,29 @@ func (h *UploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if h.cfg.KeepOriginalFormat {
 		size, err := h.fs.SaveOriginal(slug, "original", data, string(format))
 		if err != nil {
-			log.Printf("warning: failed to save original: %v", err)
+			logging.Get("upload").Printf("warning: failed to save original: %v", err)
 		} else {
 			originalSize = size
 		}
 	}
 
 	// Process image (re-encode + resize)
+	processStart := time.Now()
 	transformParams := parseTransformParams(r)
 	results, err := h.processor.ProcessWithTransform(data, transformParams)
 	if err != nil {
-		log.Printf("process error: %v", err)
+		logging.Get("upload").Printf("process error: %v", err)
 		h.fs.Delete(slug)
 		jsonError(w, "image processing failed", http.StatusInternalServerError)
 		return
 	}
+	logging.Get("upload").Printf("upload.Create: processing completed slug=%s variants=%d elapsed=%s", slug, len(results), time.Since(processStart))
 
 	// Save all sizes
 	totalSize := originalSize
 	for _, res := range results {
 		if err := h.fs.Save(slug, res.Name, res.Data); err != nil {
-			log.Printf("save error: %v", err)
+			logging.Get("upload").Printf("save error: %v", err)
 			h.fs.Delete(slug) // cleanup on failure
 			jsonError(w, "storage error", http.StatusInternalServerError)
 			return
@@ -174,7 +176,7 @@ func (h *UploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	editToken, err := generateEditToken()
 	if err != nil {
-		log.Printf("generate token error: %v", err)
+		logging.Get("upload").Printf("generate token error: %v", err)
 		h.fs.Delete(slug)
 		jsonError(w, "token generation error", http.StatusInternalServerError)
 		return
@@ -193,7 +195,7 @@ func (h *UploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if _, err := h.db.InsertImage(img); err != nil {
-		log.Printf("upload.Create: db insert error: %v", err)
+		logging.Get("upload").Printf("upload.Create: db insert error: %v", err)
 		h.fs.Delete(slug)
 		jsonError(w, "database error", http.StatusInternalServerError)
 		return
@@ -273,7 +275,7 @@ func (h *ImageViewHandler) ServeHTTP(w http.ResponseWriter, r *http.Request, slu
 	}
 
 	if err := h.tmpl.ExecuteTemplate(w, "image.html", data); err != nil {
-		log.Printf("template error: %v", err)
+		logging.Get("upload").Printf("template error: %v", err)
 		http.Error(w, "Internal server error", 500)
 	}
 }
@@ -325,7 +327,7 @@ func (h *ImageEditHandler) ServeHTTP(w http.ResponseWriter, r *http.Request, slu
 	}
 
 	if !authorized {
-		log.Printf("upload.ImageEdit: unauthorized slug=%s has_edit_token=%v", slug, r.Header.Get("X-Edit-Token") != "" || r.URL.Query().Get("edit") != "")
+		logging.Get("upload").Printf("upload.ImageEdit: unauthorized slug=%s has_edit_token=%v", slug, r.Header.Get("X-Edit-Token") != "" || r.URL.Query().Get("edit") != "")
 		http.Error(w, "Forbidden", 403)
 		return
 	}
@@ -403,7 +405,7 @@ func (h *ImageEditHandler) ServeHTTP(w http.ResponseWriter, r *http.Request, slu
 
 	if !img.Edited {
 		if err := h.fs.SaveBackup(slug); err != nil {
-			log.Printf("backup failed: %v", err)
+			logging.Get("upload").Printf("backup failed: %v", err)
 		}
 	}
 
@@ -540,17 +542,17 @@ func (h *UploadHandler) DeleteImage(w http.ResponseWriter, r *http.Request, slug
 	}
 
 	if img.EditToken == "" || img.EditToken != editToken {
-		log.Printf("upload.DeleteImage: invalid edit token slug=%s", slug)
+		logging.Get("upload").Printf("upload.DeleteImage: invalid edit token slug=%s", slug)
 		jsonError(w, "invalid edit token", http.StatusForbidden)
 		return
 	}
 
 	if err := h.fs.Delete(slug); err != nil {
-		log.Printf("delete files error: %v", err)
+		logging.Get("upload").Printf("delete files error: %v", err)
 	}
 
 	if err := h.db.DeleteImageBySlug(slug); err != nil {
-		log.Printf("upload.DeleteImage: db delete error slug=%s: %v", slug, err)
+		logging.Get("upload").Printf("upload.DeleteImage: db delete error slug=%s: %v", slug, err)
 		jsonError(w, "database error", http.StatusInternalServerError)
 		return
 	}

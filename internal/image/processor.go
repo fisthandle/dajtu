@@ -2,6 +2,9 @@ package image
 
 import (
 	"fmt"
+	"time"
+
+	"dajtu/internal/logging"
 
 	"github.com/h2non/bimg"
 )
@@ -15,10 +18,7 @@ type Size struct {
 
 var Sizes = []Size{
 	{Name: "original", Width: 4096, Height: 0, Quality: 90},
-	{Name: "1920", Width: 1920, Height: 0, Quality: 90},
-	{Name: "800", Width: 800, Height: 0, Quality: 90},
-	{Name: "200", Width: 200, Height: 0, Quality: 90},
-	{Name: "thumb", Width: 150, Height: 150, Quality: 85},
+	{Name: "thumb", Width: 200, Height: 200, Quality: 85},
 }
 
 type ProcessResult struct {
@@ -121,6 +121,7 @@ func processVariants(data []byte, noAutoRotate bool) ([]ProcessResult, error) {
 	var results []ProcessResult
 
 	for _, s := range Sizes {
+		sizeStart := time.Now()
 		// Skip if original is smaller than target
 		targetWidth := s.Width
 		if size.Width < targetWidth {
@@ -161,6 +162,15 @@ func processVariants(data []byte, noAutoRotate bool) ([]ProcessResult, error) {
 			Width:  resultSize.Width,
 			Height: resultSize.Height,
 		})
+		logging.Get("image").Printf(
+			"image.process: variant=%s target=%dx%d result=%dx%d elapsed=%s",
+			s.Name,
+			opts.Width,
+			opts.Height,
+			resultSize.Width,
+			resultSize.Height,
+			time.Since(sizeStart),
+		)
 
 		// If original was smaller than first target, we only need one version
 		if size.Width <= Sizes[0].Width && s.Name == "original" {

@@ -4,7 +4,6 @@ import (
 	"embed"
 	"encoding/json"
 	"html/template"
-	"log"
 	"net/http"
 	"slices"
 	"strconv"
@@ -13,6 +12,7 @@ import (
 
 	"dajtu/internal/config"
 	"dajtu/internal/image"
+	"dajtu/internal/logging"
 	"dajtu/internal/middleware"
 	"dajtu/internal/storage"
 )
@@ -58,7 +58,7 @@ func (h *GalleryHandler) Index(w http.ResponseWriter, r *http.Request) {
 		"CanUpload": canUpload,
 		"Welcome":   r.URL.Query().Get("welcome") == "1",
 	}); err != nil {
-		log.Printf("index template error: %v", err)
+		logging.Get("gallery").Printf("index template error: %v", err)
 	}
 }
 
@@ -79,27 +79,27 @@ func (h *GalleryHandler) Create(w http.ResponseWriter, r *http.Request) {
 	if !h.cfg.PublicUpload {
 		user := middleware.GetUser(r)
 		if user == nil {
-			log.Printf("gallery.Create: public upload disabled, user not logged in")
+			logging.Get("gallery").Printf("gallery.Create: public upload disabled, user not logged in")
 			jsonError(w, "Galerie mogą tworzyć tylko zweryfikowani użytkownicy", http.StatusForbidden)
 			return
 		}
-		log.Printf("gallery.Create: public upload disabled but user %s is logged in", user.DisplayName)
+		logging.Get("gallery").Printf("gallery.Create: public upload disabled but user %s is logged in", user.DisplayName)
 	}
 
 	r.Body = http.MaxBytesReader(w, r.Body, int64(h.cfg.MaxFileSizeMB)*1024*1024*10) // 10x for multiple files
 
 	if err := r.ParseMultipartForm(int64(h.cfg.MaxFileSizeMB) * 1024 * 1024 * 10); err != nil {
-		log.Printf("gallery.Create: parse error: %v", err)
+		logging.Get("gallery").Printf("gallery.Create: parse error: %v", err)
 		jsonError(w, "request too large", http.StatusRequestEntityTooLarge)
 		return
 	}
 
 	existingImageSlug := r.FormValue("existing_image")
 	files := r.MultipartForm.File["files"]
-	log.Printf("gallery.Create: method=%s existing_image=%s has_edit_token=%v files=%d", r.Method, existingImageSlug, r.Header.Get("X-Edit-Token") != "", len(files))
+	logging.Get("gallery").Printf("gallery.Create: method=%s existing_image=%s has_edit_token=%v files=%d", r.Method, existingImageSlug, r.Header.Get("X-Edit-Token") != "", len(files))
 
 	if existingImageSlug == "" && len(files) == 0 {
-		log.Printf("gallery.Create: no files provided existing_image=%s", existingImageSlug)
+		logging.Get("gallery").Printf("gallery.Create: no files provided existing_image=%s", existingImageSlug)
 		jsonError(w, "no files provided", http.StatusBadRequest)
 		return
 	}
@@ -126,7 +126,7 @@ func (h *GalleryHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	galleryID, err := h.db.InsertGallery(gallery)
 	if err != nil {
-		log.Printf("gallery.Create: db insert error: %v", err)
+		logging.Get("gallery").Printf("gallery.Create: db insert error: %v", err)
 		jsonError(w, "database error", http.StatusInternalServerError)
 		return
 	}
@@ -145,36 +145,34 @@ func (h *GalleryHandler) Create(w http.ResponseWriter, r *http.Request) {
 		existingImage, err := h.db.GetImageBySlug(existingImageSlug)
 		if err != nil || existingImage == nil {
 			if delErr := h.db.DeleteGalleryByID(galleryID); delErr != nil {
-				log.Printf("failed to rollback gallery %d: %v", galleryID, delErr)
+				logging.Get("gallery").Printf("failed to rollback gallery %d: %v", galleryID, delErr)
 			}
-			log.Printf("gallery.Create: existing image not found slug=%s", existingImageSlug)
+			logging.Get("gallery").Printf("gallery.Create: existing image not found slug=%s", existingImageSlug)
 			jsonError(w, "image not found", http.StatusNotFound)
 			return
 		}
 
 		if existingImage.EditToken != editToken {
 			if delErr := h.db.DeleteGalleryByID(galleryID); delErr != nil {
-				log.Printf("failed to rollback gallery %d: %v", galleryID, delErr)
+				logging.Get("gallery").Printf("failed to rollback gallery %d: %v", galleryID, delErr)
 			}
-			log.Printf("gallery.Create: unauthorized existing_image=%s has_edit_token=%v", existingImageSlug, editToken != "")
+			logging.Get("gallery").Printf("gallery.Create: unauthorized existing_image=%s has_edit_token=%v", existingImageSlug, editToken != "")
 			jsonError(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
 
 		if err := h.db.AddImageToGallery(galleryID, existingImage.ID); err != nil {
 			if delErr := h.db.DeleteGalleryByID(galleryID); delErr != nil {
-				log.Printf("failed to rollback gallery %d: %v", galleryID, delErr)
+				logging.Get("gallery").Printf("failed to rollback gallery %d: %v", galleryID, delErr)
 			}
-			log.Printf("gallery.Create: add image to gallery failed: %v", err)
+			logging.Get("gallery").Printf("gallery.Create: add image to gallery failed: %v", err)
 			jsonError(w, "database error", http.StatusInternalServerError)
 			return
 		}
 
 		sizes := make(map[string]string)
 		sizes["original"] = buildImageURL(baseURL, existingImageSlug, "original")
-		sizes["1920"] = buildImageURL(baseURL, existingImageSlug, "1920")
-		sizes["800"] = buildImageURL(baseURL, existingImageSlug, "800")
-		sizes["200"] = buildImageURL(baseURL, existingImageSlug, "200")
+		sizes["1200"] = buildImageURL(baseURL, existingImageSlug, "1200")
 		sizes["thumb"] = buildImageURL(baseURL, existingImageSlug, "thumb")
 
 		uploadedImages = append(uploadedImages, UploadResponse{
@@ -203,7 +201,7 @@ func (h *GalleryHandler) Create(w http.ResponseWriter, r *http.Request) {
 		if h.cfg.KeepOriginalFormat {
 			size, err := h.fs.SaveOriginal(slug, "original", data, string(format))
 			if err != nil {
-				log.Printf("warning: failed to save original: %v", err)
+				logging.Get("gallery").Printf("warning: failed to save original: %v", err)
 			} else {
 				originalSize = size
 			}
@@ -255,9 +253,9 @@ func (h *GalleryHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	if len(uploadedImages) == 0 {
 		if delErr := h.db.DeleteGalleryByID(galleryID); delErr != nil {
-			log.Printf("failed to rollback gallery %d: %v", galleryID, delErr)
+			logging.Get("gallery").Printf("failed to rollback gallery %d: %v", galleryID, delErr)
 		}
-		log.Printf("gallery.Create: no valid images uploaded")
+		logging.Get("gallery").Printf("gallery.Create: no valid images uploaded")
 		jsonError(w, "no valid images uploaded", http.StatusBadRequest)
 		return
 	}
@@ -302,7 +300,7 @@ func (h *GalleryHandler) AddImages(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if gallery.EditToken != editToken {
-		log.Printf("gallery.AddImages: invalid edit token slug=%s", gallerySlug)
+		logging.Get("gallery").Printf("gallery.AddImages: invalid edit token slug=%s", gallerySlug)
 		jsonError(w, "invalid edit token", http.StatusForbidden)
 		return
 	}
@@ -311,18 +309,18 @@ func (h *GalleryHandler) AddImages(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, int64(h.cfg.MaxFileSizeMB)*1024*1024*10)
 
 	if err := r.ParseMultipartForm(int64(h.cfg.MaxFileSizeMB) * 1024 * 1024 * 10); err != nil {
-		log.Printf("gallery.AddImages: parse error slug=%s: %v", gallerySlug, err)
+		logging.Get("gallery").Printf("gallery.AddImages: parse error slug=%s: %v", gallerySlug, err)
 		jsonError(w, "request too large", http.StatusRequestEntityTooLarge)
 		return
 	}
 
 	files := r.MultipartForm.File["files"]
 	if len(files) == 0 {
-		log.Printf("gallery.AddImages: no files provided slug=%s", gallerySlug)
+		logging.Get("gallery").Printf("gallery.AddImages: no files provided slug=%s", gallerySlug)
 		jsonError(w, "no files provided", http.StatusBadRequest)
 		return
 	}
-	log.Printf("gallery.AddImages: slug=%s files=%d", gallerySlug, len(files))
+	logging.Get("gallery").Printf("gallery.AddImages: slug=%s files=%d", gallerySlug, len(files))
 
 	baseURL := getBaseURL(h.cfg, r)
 
@@ -348,7 +346,7 @@ func (h *GalleryHandler) AddImages(w http.ResponseWriter, r *http.Request) {
 		if h.cfg.KeepOriginalFormat {
 			size, err := h.fs.SaveOriginal(slug, "original", data, string(format))
 			if err != nil {
-				log.Printf("warning: failed to save original: %v", err)
+				logging.Get("gallery").Printf("warning: failed to save original: %v", err)
 			} else {
 				originalSize = size
 			}
@@ -547,8 +545,8 @@ func (h *GalleryHandler) View(w http.ResponseWriter, r *http.Request) {
 	for _, img := range images {
 		imageData = append(imageData, ImageData{
 			Slug:      img.Slug,
-			URL:       baseURL + "/i/" + img.Slug + ".webp",
-			ThumbURL:  baseURL + "/i/" + img.Slug + "/200.webp",
+			URL:       baseURL + "/i/" + img.Slug + "/1200.webp",
+			ThumbURL:  baseURL + "/i/" + img.Slug + "/thumb.webp",
 			Width:     img.Width,
 			Height:    img.Height,
 			UpdatedAt: img.UpdatedAt,
@@ -577,6 +575,6 @@ func (h *GalleryHandler) View(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := h.galleryTmpl.ExecuteTemplate(w, "gallery.html", data); err != nil {
-		log.Printf("template error: %v", err)
+		logging.Get("gallery").Printf("template error: %v", err)
 	}
 }

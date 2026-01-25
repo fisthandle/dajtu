@@ -3,34 +3,88 @@ package handler
 import (
 	"fmt"
 	"html/template"
+	"io"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
+	"dajtu/internal/config"
+	"dajtu/internal/middleware"
 	"dajtu/internal/storage"
 )
 
 type AdminHandler struct {
+	cfg               *config.Config
 	db                *storage.DB
 	fs                *storage.Filesystem
+	traffic           *middleware.TrafficStats
 	dashboardTmpl     *template.Template
 	usersTmpl         *template.Template
 	userDetailTmpl    *template.Template
 	galleriesTmpl     *template.Template
 	galleryDetailTmpl *template.Template
 	imagesTmpl        *template.Template
+	logsTmpl          *template.Template
 }
 
-func NewAdminHandler(db *storage.DB, fs *storage.Filesystem) *AdminHandler {
+func NewAdminHandler(cfg *config.Config, db *storage.DB, fs *storage.Filesystem, traffic *middleware.TrafficStats) *AdminHandler {
 	funcMap := template.FuncMap{
 		"divf": func(a, b int64) float64 {
 			if b == 0 {
 				return 0
 			}
 			return float64(a) / float64(b)
+		},
+		"formatBytes": func(b int64) string {
+			const (
+				kb = 1024
+				mb = 1024 * 1024
+				gb = 1024 * 1024 * 1024
+			)
+			switch {
+			case b >= gb:
+				return fmt.Sprintf("%.2f GB", float64(b)/float64(gb))
+			case b >= mb:
+				return fmt.Sprintf("%.2f MB", float64(b)/float64(mb))
+			case b >= kb:
+				return fmt.Sprintf("%.2f KB", float64(b)/float64(kb))
+			default:
+				return fmt.Sprintf("%d B", b)
+			}
+		},
+		"formatCount": func(n int64) string {
+			switch {
+			case n >= 1_000_000_000:
+				return fmt.Sprintf("%.1fB", float64(n)/1_000_000_000)
+			case n >= 1_000_000:
+				return fmt.Sprintf("%.1fM", float64(n)/1_000_000)
+			case n >= 1_000:
+				return fmt.Sprintf("%.1fK", float64(n)/1_000)
+			default:
+				return fmt.Sprintf("%d", n)
+			}
+		},
+		"formatRate": func(bps float64) string {
+			const (
+				kb = 1024.0
+				mb = 1024.0 * 1024.0
+				gb = 1024.0 * 1024.0 * 1024.0
+			)
+			switch {
+			case bps >= gb:
+				return fmt.Sprintf("%.2f GB/s", bps/gb)
+			case bps >= mb:
+				return fmt.Sprintf("%.2f MB/s", bps/mb)
+			case bps >= kb:
+				return fmt.Sprintf("%.2f KB/s", bps/kb)
+			default:
+				return fmt.Sprintf("%.2f B/s", bps)
+			}
 		},
 		"formatDate": func(ts int64) string {
 			if ts == 0 {
@@ -47,14 +101,17 @@ func NewAdminHandler(db *storage.DB, fs *storage.Filesystem) *AdminHandler {
 		))
 	}
 	return &AdminHandler{
+		cfg:               cfg,
 		db:                db,
 		fs:                fs,
+		traffic:           traffic,
 		dashboardTmpl:     parseAdmin("dashboard", "templates/admin/dashboard.html"),
 		usersTmpl:         parseAdmin("users", "templates/admin/users.html"),
 		userDetailTmpl:    parseAdmin("user_detail", "templates/admin/user_detail.html"),
 		galleriesTmpl:     parseAdmin("galleries", "templates/admin/galleries.html"),
 		galleryDetailTmpl: parseAdmin("gallery_detail", "templates/admin/gallery_detail.html"),
 		imagesTmpl:        parseAdmin("images", "templates/admin/images.html"),
+		logsTmpl:          parseAdmin("logs", "templates/admin/logs.html"),
 	}
 }
 
@@ -64,7 +121,15 @@ func (h *AdminHandler) Dashboard(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 500)
 		return
 	}
-	h.dashboardTmpl.ExecuteTemplate(w, "dashboard.html", stats)
+	var traffic middleware.TrafficSnapshot
+	if h.traffic != nil {
+		traffic = h.traffic.Snapshot(time.Now())
+	}
+	data := map[string]any{
+		"Stats":   stats,
+		"Traffic": traffic,
+	}
+	h.dashboardTmpl.ExecuteTemplate(w, "dashboard.html", data)
 }
 
 func (h *AdminHandler) Users(w http.ResponseWriter, r *http.Request) {
@@ -416,6 +481,68 @@ func (h *AdminHandler) DeleteImage(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/admin/images", http.StatusSeeOther)
 }
 
+func (h *AdminHandler) Logs(w http.ResponseWriter, r *http.Request) {
+	lines := 300
+	if raw := r.URL.Query().Get("lines"); raw != "" {
+		if raw == "all" {
+			lines = 0
+		} else {
+			lines = parseQueryInt(r, "lines", 300)
+			if lines < 1 {
+				lines = 300
+			}
+			if lines > 5000 {
+				lines = 5000
+			}
+		}
+	}
+
+	files, err := listLogFiles(h.cfg.LogDir)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+
+	selected := r.URL.Query().Get("file")
+	if selected == "" && len(files) > 0 {
+		selected = files[0].Name
+	}
+	if selected != "" && !fileAllowed(selected, files) {
+		http.Error(w, "invalid log file", http.StatusBadRequest)
+		return
+	}
+
+	var content string
+	var readErr string
+	if selected != "" {
+		path := filepath.Join(h.cfg.LogDir, selected)
+		if lines == 0 {
+			data, err := os.ReadFile(path)
+			if err != nil {
+				readErr = err.Error()
+			} else {
+				content = string(data)
+			}
+		} else {
+			linesData, err := tailLines(path, lines)
+			if err != nil {
+				readErr = err.Error()
+			} else {
+				content = strings.Join(linesData, "\n")
+			}
+		}
+	}
+
+	data := map[string]any{
+		"Files":    files,
+		"Selected": selected,
+		"Lines":    lines,
+		"Content":  content,
+		"Error":    readErr,
+	}
+	h.logsTmpl.ExecuteTemplate(w, "logs.html", data)
+}
+
 func parseQueryInt(r *http.Request, key string, fallback int) int {
 	raw := r.URL.Query().Get(key)
 	if raw == "" {
@@ -449,6 +576,156 @@ func adminPages(current, total int) []int {
 	}
 	sort.Ints(out)
 	return out
+}
+
+type logFileInfo struct {
+	Name    string
+	Size    int64
+	Lines   int64
+	ModUnix int64
+}
+
+func listLogFiles(dir string) ([]logFileInfo, error) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+
+	var files []logFileInfo
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		if strings.HasSuffix(name, ".log") {
+			info, err := entry.Info()
+			if err != nil {
+				continue
+			}
+			lineCount, err := countLines(filepath.Join(dir, name))
+			if err != nil {
+				lineCount = 0
+			}
+			files = append(files, logFileInfo{
+				Name:    name,
+				Size:    info.Size(),
+				Lines:   lineCount,
+				ModUnix: info.ModTime().Unix(),
+			})
+		}
+	}
+	sort.Slice(files, func(i, j int) bool {
+		return files[i].Name > files[j].Name
+	})
+	return files, nil
+}
+
+func fileAllowed(name string, allowed []logFileInfo) bool {
+	if filepath.Base(name) != name {
+		return false
+	}
+	for _, f := range allowed {
+		if f.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
+func tailLines(path string, maxLines int) ([]string, error) {
+	if maxLines <= 0 {
+		return []string{}, nil
+	}
+
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	info, err := file.Stat()
+	if err != nil {
+		return nil, err
+	}
+	size := info.Size()
+	if size == 0 {
+		return []string{}, nil
+	}
+
+	const chunkSize int64 = 32 * 1024
+	var (
+		offset int64 = size
+		buf          = make([]byte, 0)
+		lines  []string
+	)
+
+	for offset > 0 && len(lines) <= maxLines {
+		readSize := chunkSize
+		if offset < readSize {
+			readSize = offset
+		}
+		offset -= readSize
+
+		chunk := make([]byte, readSize)
+		n, err := file.ReadAt(chunk, offset)
+		if err != nil && err != io.EOF {
+			return nil, err
+		}
+		chunk = chunk[:n]
+		buf = append(chunk, buf...)
+		lines = strings.Split(string(buf), "\n")
+		if len(lines) > maxLines+1 {
+			lines = lines[len(lines)-(maxLines+1):]
+			buf = []byte(strings.Join(lines, "\n"))
+		}
+	}
+
+	if len(lines) > 0 && lines[len(lines)-1] == "" {
+		lines = lines[:len(lines)-1]
+	}
+	if len(lines) > maxLines {
+		lines = lines[len(lines)-maxLines:]
+	}
+	return lines, nil
+}
+
+func countLines(path string) (int64, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return 0, err
+	}
+	defer file.Close()
+
+	const bufSize = 32 * 1024
+	buf := make([]byte, bufSize)
+	var count int64
+	var lastByte byte
+	var sawData bool
+
+	for {
+		n, err := file.Read(buf)
+		if n > 0 {
+			sawData = true
+			for _, b := range buf[:n] {
+				if b == '\n' {
+					count++
+				}
+				lastByte = b
+			}
+		}
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	if sawData && lastByte != '\n' {
+		count++
+	}
+
+	return count, nil
 }
 
 func minInt(a, b int) int {

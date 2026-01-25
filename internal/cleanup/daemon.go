@@ -1,10 +1,10 @@
 package cleanup
 
 import (
-	"log"
 	"time"
 
 	"dajtu/internal/config"
+	"dajtu/internal/logging"
 	"dajtu/internal/storage"
 )
 
@@ -34,14 +34,14 @@ func (d *Daemon) Start() {
 
 func (d *Daemon) cleanup() {
 	if deleted, err := d.db.CleanExpiredSessions(); err != nil {
-		log.Printf("cleanup: failed to clean sessions: %v", err)
+		logging.Get("cleanup").Printf("cleanup: failed to clean sessions: %v", err)
 	} else if deleted > 0 {
-		log.Printf("cleanup: deleted %d expired sessions", deleted)
+		logging.Get("cleanup").Printf("cleanup: deleted %d expired sessions", deleted)
 	}
 
 	totalSize, err := d.db.GetTotalSize()
 	if err != nil {
-		log.Printf("cleanup: failed to get total size: %v", err)
+		logging.Get("cleanup").Printf("cleanup: failed to get total size: %v", err)
 		return
 	}
 
@@ -52,7 +52,7 @@ func (d *Daemon) cleanup() {
 		return
 	}
 
-	log.Printf("cleanup: disk usage %.2f GB exceeds %.2f GB, cleaning to %.2f GB",
+	logging.Get("cleanup").Printf("cleanup: disk usage %.2f GB exceeds %.2f GB, cleaning to %.2f GB",
 		float64(totalSize)/(1024*1024*1024),
 		d.cfg.MaxDiskGB,
 		d.cfg.CleanupTarget)
@@ -61,7 +61,7 @@ func (d *Daemon) cleanup() {
 		// Get oldest 100 images
 		images, err := d.db.GetOldestImages(100)
 		if err != nil {
-			log.Printf("cleanup: failed to get oldest images: %v", err)
+			logging.Get("cleanup").Printf("cleanup: failed to get oldest images: %v", err)
 			return
 		}
 
@@ -75,19 +75,19 @@ func (d *Daemon) cleanup() {
 			}
 
 			if err := d.fs.Delete(img.Slug); err != nil {
-				log.Printf("cleanup: failed to delete files for %s: %v", img.Slug, err)
+				logging.Get("cleanup").Printf("cleanup: failed to delete files for %s: %v", img.Slug, err)
 				continue
 			}
 
 			if err := d.db.DeleteImageBySlug(img.Slug); err != nil {
-				log.Printf("cleanup: failed to delete db record for %s: %v", img.Slug, err)
+				logging.Get("cleanup").Printf("cleanup: failed to delete db record for %s: %v", img.Slug, err)
 				continue
 			}
 
 			totalSize -= img.FileSize
-			log.Printf("cleanup: deleted %s (%.2f MB)", img.Slug, float64(img.FileSize)/(1024*1024))
+			logging.Get("cleanup").Printf("cleanup: deleted %s (%.2f MB)", img.Slug, float64(img.FileSize)/(1024*1024))
 		}
 	}
 
-	log.Printf("cleanup: done, current usage %.2f GB", float64(totalSize)/(1024*1024*1024))
+	logging.Get("cleanup").Printf("cleanup: done, current usage %.2f GB", float64(totalSize)/(1024*1024*1024))
 }

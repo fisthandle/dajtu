@@ -13,3 +13,4 @@ config/.env.serwer
 !/CLAUDE.md
 config/.env.backup
 .restore-tmp
+logs/

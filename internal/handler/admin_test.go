@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"dajtu/internal/middleware"
 	"dajtu/internal/storage"
 	"dajtu/internal/testutil"
 )
@@ -16,7 +17,9 @@ func testAdminSetup(t *testing.T) (*storage.DB, *storage.Filesystem, *AdminHandl
 	t.Helper()
 	db, _ := testutil.TestDB(t)
 	fs, _ := testutil.TestFilesystem(t)
-	return db, fs, NewAdminHandler(db, fs)
+	cfg := testutil.TestConfig(t)
+	traffic := middleware.NewTrafficStats()
+	return db, fs, NewAdminHandler(cfg, db, fs, traffic)
 }
 
 func seedAdminData(t *testing.T, db *storage.DB) (*storage.User, *storage.Gallery, *storage.Image) {

@@ -4,26 +4,69 @@
     <div class="stats">
         <div class="stat">
             <a href="/admin/images">
-                <div class="stat-value">{{.TotalImages}}</div>
+                <div class="stat-value">{{.Stats.TotalImages}}</div>
                 <div class="stat-label">Zdjęć</div>
             </a>
         </div>
         <div class="stat">
             <a href="/admin/galleries">
-                <div class="stat-value">{{.TotalGalleries}}</div>
+                <div class="stat-value">{{.Stats.TotalGalleries}}</div>
                 <div class="stat-label">Galerii</div>
             </a>
         </div>
         <div class="stat">
             <a href="/admin/users">
-                <div class="stat-value">{{.TotalUsers}}</div>
+                <div class="stat-value">{{.Stats.TotalUsers}}</div>
                 <div class="stat-label">Użytkowników</div>
             </a>
         </div>
         <div class="stat">
-            <div class="stat-value">{{printf "%.2f" (divf .DiskUsageBytes 1073741824)}} GB</div>
+            <div class="stat-value">{{printf "%.2f" (divf .Stats.DiskUsageBytes 1073741824)}} GB</div>
             <div class="stat-label">Zajęte miejsce</div>
         </div>
     </div>
+
+    <h3>Transfer</h3>
+    <table class="admin-table">
+        <thead>
+            <tr>
+                <th>Okno</th>
+                <th class="col-size">Dane</th>
+                <th class="col-size">Średni bitrate</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>1 min</td>
+                <td class="col-size">{{formatBytes .Traffic.W1.Bytes}}</td>
+                <td class="col-size">{{formatRate .Traffic.W1.Bps}}</td>
+            </tr>
+            <tr>
+                <td>5 min</td>
+                <td class="col-size">{{formatBytes .Traffic.W5.Bytes}}</td>
+                <td class="col-size">{{formatRate .Traffic.W5.Bps}}</td>
+            </tr>
+            <tr>
+                <td>60 min</td>
+                <td class="col-size">{{formatBytes .Traffic.W60.Bytes}}</td>
+                <td class="col-size">{{formatRate .Traffic.W60.Bps}}</td>
+            </tr>
+            <tr>
+                <td>24 h</td>
+                <td class="col-size">{{formatBytes .Traffic.H24.Bytes}}</td>
+                <td class="col-size">{{formatRate .Traffic.H24.Bps}}</td>
+            </tr>
+            <tr>
+                <td>72 h</td>
+                <td class="col-size">{{formatBytes .Traffic.H72.Bytes}}</td>
+                <td class="col-size">{{formatRate .Traffic.H72.Bps}}</td>
+            </tr>
+            <tr>
+                <td>7 dni</td>
+                <td class="col-size">{{formatBytes .Traffic.D7.Bytes}}</td>
+                <td class="col-size">{{formatRate .Traffic.D7.Bps}}</td>
+            </tr>
+        </tbody>
+    </table>
 {{end}}
 {{template "admin_base" .}}

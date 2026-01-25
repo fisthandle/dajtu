@@ -649,7 +649,7 @@
                     <button class="edit-btn" onclick="editImage('{{.Slug}}')" title="Edytuj">✎</button>
                     <button class="delete-btn" onclick="deleteImage('{{.Slug}}')" title="Usuń">&times;</button>
                 </div>
-                <a href="{{.URL}}" data-lightbox data-full="{{$.BaseURL}}/i/{{.Slug}}/1920?v={{.UpdatedAt}}">
+                <a href="{{.URL}}" data-lightbox data-full="{{$.BaseURL}}/i/{{.Slug}}/1200?v={{.UpdatedAt}}">
                     <img data-src="{{.ThumbURL}}?v={{.UpdatedAt}}" alt="" loading="lazy">
                 </a>
             </div>
@@ -1094,7 +1094,7 @@
                         if (item) {
                             const img = item.querySelector('img');
                             if (img) {
-                                img.src = `${baseURL}/i/${currentEditingSlug}/200?t=${Date.now()}`;
+                                img.src = `${baseURL}/i/${currentEditingSlug}/thumb?t=${Date.now()}`;
                             }
                             // Flash animation
                             item.classList.add('updated');
@@ -1102,7 +1102,7 @@
                             // Update lightbox entry
                             const idx = images.findIndex(i => i.link.closest('.gallery-item')?.dataset.slug === currentEditingSlug);
                             if (idx >= 0) {
-                                images[idx].full = `${baseURL}/i/${currentEditingSlug}/1920?t=${Date.now()}`;
+                                images[idx].full = `${baseURL}/i/${currentEditingSlug}/1200?t=${Date.now()}`;
                             }
                         }
                         window.editorModal.close();
@@ -1245,7 +1245,7 @@
                     const currentIndex = images.length;
                     const link = document.createElement('a');
                     link.href = 'javascript:void(0)';
-                    link.dataset.full = `${baseURL}/i/${img.slug}/1920`;
+                    link.dataset.full = `${baseURL}/i/${img.slug}/1200`;
                     link.dataset.lightbox = '';
                     link.onclick = (e) => {
                         e.preventDefault();
@@ -1253,7 +1253,7 @@
                     };
 
                     const imgEl = document.createElement('img');
-                    imgEl.src = `${baseURL}/i/${img.slug}/200`;
+                    imgEl.src = `${baseURL}/i/${img.slug}/thumb`;
                     imgEl.alt = '';
                     imgEl.className = 'loaded';
 
@@ -1264,7 +1264,7 @@
 
                     // Add to images array for lightbox
                     images.push({
-                        full: `${baseURL}/i/${img.slug}/1920`,
+                        full: `${baseURL}/i/${img.slug}/1200`,
                         link: link
                     });
                 }

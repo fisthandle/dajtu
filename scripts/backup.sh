@@ -38,9 +38,9 @@ rm -f "$DB_BACKUP"
 log "Applying retention policy..."
 restic forget \
     --keep-hourly 24 \
-    --keep-daily 7 \
-    --keep-weekly 4 \
-    --keep-monthly 3 \
+    --keep-daily 12 \
+    --keep-weekly 12 \
+    --keep-monthly 12 \
     --prune \
     2>&1 | tee -a "$LOG_FILE"
 

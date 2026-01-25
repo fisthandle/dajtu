@@ -23,7 +23,7 @@ func TestProcess_BasicJPEG(t *testing.T) {
 		names[r.Name] = true
 	}
 
-	expected := []string{"original", "1920", "800", "200", "thumb"}
+	expected := []string{"original", "thumb"}
 	for _, name := range expected {
 		if !names[name] {
 			t.Errorf("missing result for size %q", name)

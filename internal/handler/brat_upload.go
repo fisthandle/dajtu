@@ -3,7 +3,6 @@ package handler
 import (
 	"encoding/base64"
 	"encoding/json"
-	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -11,6 +10,7 @@ import (
 	"dajtu/internal/auth"
 	"dajtu/internal/config"
 	"dajtu/internal/image"
+	"dajtu/internal/logging"
 	"dajtu/internal/storage"
 )
 
@@ -70,7 +70,7 @@ func (h *BratUploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.decoder.DecodeWithMaxAge(token, 86400)
 	if err != nil {
-		log.Printf("token decode error: %v", err)
+		logging.Get("brat").Printf("token decode error: %v", err)
 		jsonError(w, "invalid or expired token", http.StatusUnauthorized)
 		return
 	}
@@ -118,14 +118,14 @@ func (h *BratUploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	dbUser, err := h.db.GetOrCreateBratUser(user.Pseudonim)
 	if err != nil {
-		log.Printf("get/create user error: %v", err)
+		logging.Get("brat").Printf("get/create user error: %v", err)
 		jsonError(w, "user creation failed", http.StatusInternalServerError)
 		return
 	}
 
 	gallery, err := h.db.GetOrCreateBratGallery(dbUser.ID, dbUser.Slug, entryID, title)
 	if err != nil {
-		log.Printf("get/create gallery error: %v", err)
+		logging.Get("brat").Printf("get/create gallery error: %v", err)
 		jsonError(w, "gallery creation failed", http.StatusInternalServerError)
 		return
 	}
@@ -136,7 +136,7 @@ func (h *BratUploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if h.cfg.KeepOriginalFormat {
 		size, err := h.fs.SaveOriginal(slug, "original", data, string(format))
 		if err != nil {
-			log.Printf("warning: failed to save original: %v", err)
+			logging.Get("brat").Printf("warning: failed to save original: %v", err)
 		} else {
 			originalSize = size
 		}
@@ -144,7 +144,7 @@ func (h *BratUploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	results, err := h.processor.ProcessWithTransform(data, image.TransformParams{})
 	if err != nil {
-		log.Printf("process error: %v", err)
+		logging.Get("brat").Printf("process error: %v", err)
 		h.fs.Delete(slug)
 		jsonError(w, "image processing failed", http.StatusInternalServerError)
 		return
@@ -153,7 +153,7 @@ func (h *BratUploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	totalSize := originalSize
 	for _, res := range results {
 		if err := h.fs.Save(slug, res.Name, res.Data); err != nil {
-			log.Printf("save error: %v", err)
+			logging.Get("brat").Printf("save error: %v", err)
 			h.fs.Delete(slug)
 			jsonError(w, "save failed", http.StatusInternalServerError)
 			return
@@ -176,7 +176,7 @@ func (h *BratUploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if _, err := h.db.InsertImage(img); err != nil {
-		log.Printf("insert image error: %v", err)
+		logging.Get("brat").Printf("insert image error: %v", err)
 		h.fs.Delete(slug)
 		jsonError(w, "database error", http.StatusInternalServerError)
 		return
@@ -185,7 +185,7 @@ func (h *BratUploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	baseURL := getBaseURL(h.cfg, r)
 
 	resp := BratUploadResponse{
-		URL:      buildImageURL(baseURL, slug, "original"),
+		URL:      buildImageURL(baseURL, slug, "1200"),
 		ViewURL:  baseURL + "/i/" + slug,
 		ThumbURL: buildImageURL(baseURL, slug, "thumb"),
 		Filename: header.Filename,

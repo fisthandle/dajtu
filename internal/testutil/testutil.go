@@ -49,6 +49,8 @@ func TestConfig(t *testing.T) *config.Config {
 	return &config.Config{
 		Port:               "8080",
 		DataDir:            t.TempDir(),
+		LogDir:             t.TempDir(),
+		CacheDir:           t.TempDir(),
 		MaxFileSizeMB:      10,
 		MaxDiskGB:          1.0,
 		CleanupTarget:      0.5,

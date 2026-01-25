@@ -45,6 +45,8 @@ func loadEnvFile(path string) {
 type Config struct {
 	Port               string
 	DataDir            string
+	LogDir             string
+	CacheDir           string
 	MaxFileSizeMB      int
 	MaxDiskGB          float64
 	CleanupTarget      float64
@@ -77,6 +79,8 @@ func Load() *Config {
 	cfg := &Config{
 		Port:               getEnv("PORT", "8080"),
 		DataDir:            getEnv("DATA_DIR", "./data"),
+		LogDir:             getEnv("LOG_DIR", "./data/logs"),
+		CacheDir:           getEnv("CACHE_DIR", "/tmp/dajtu-cache"),
 		MaxFileSizeMB:      getEnvInt("MAX_FILE_SIZE_MB", 20),
 		MaxDiskGB:          getEnvFloat("MAX_DISK_GB", 50.0),
 		CleanupTarget:      getEnvFloat("CLEANUP_TARGET_GB", 45.0),

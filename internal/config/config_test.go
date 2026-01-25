@@ -9,6 +9,8 @@ func TestLoad_Defaults(t *testing.T) {
 	// Clear any existing env vars
 	os.Unsetenv("PORT")
 	os.Unsetenv("DATA_DIR")
+	os.Unsetenv("LOG_DIR")
+	os.Unsetenv("CACHE_DIR")
 	os.Unsetenv("MAX_FILE_SIZE_MB")
 	os.Unsetenv("MAX_DISK_GB")
 	os.Unsetenv("CLEANUP_TARGET_GB")
@@ -32,6 +34,12 @@ func TestLoad_Defaults(t *testing.T) {
 	}
 	if cfg.DataDir != "./data" {
 		t.Errorf("DataDir = %q, want %q", cfg.DataDir, "./data")
+	}
+	if cfg.LogDir != "./data/logs" {
+		t.Errorf("LogDir = %q, want %q", cfg.LogDir, "./data/logs")
+	}
+	if cfg.CacheDir != "/tmp/dajtu-cache" {
+		t.Errorf("CacheDir = %q, want %q", cfg.CacheDir, "/tmp/dajtu-cache")
 	}
 	if cfg.MaxFileSizeMB != 20 {
 		t.Errorf("MaxFileSizeMB = %d, want %d", cfg.MaxFileSizeMB, 20)
@@ -74,6 +82,8 @@ func TestLoad_Defaults(t *testing.T) {
 func TestLoad_FromEnv(t *testing.T) {
 	os.Setenv("PORT", "3000")
 	os.Setenv("DATA_DIR", "/tmp/test")
+	os.Setenv("LOG_DIR", "/tmp/logs")
+	os.Setenv("CACHE_DIR", "/tmp/cache")
 	os.Setenv("MAX_FILE_SIZE_MB", "50")
 	os.Setenv("MAX_DISK_GB", "100.5")
 	os.Setenv("CLEANUP_TARGET_GB", "90.0")
@@ -90,6 +100,8 @@ func TestLoad_FromEnv(t *testing.T) {
 	defer func() {
 		os.Unsetenv("PORT")
 		os.Unsetenv("DATA_DIR")
+		os.Unsetenv("LOG_DIR")
+		os.Unsetenv("CACHE_DIR")
 		os.Unsetenv("MAX_FILE_SIZE_MB")
 		os.Unsetenv("MAX_DISK_GB")
 		os.Unsetenv("CLEANUP_TARGET_GB")
@@ -112,6 +124,12 @@ func TestLoad_FromEnv(t *testing.T) {
 	}
 	if cfg.DataDir != "/tmp/test" {
 		t.Errorf("DataDir = %q, want %q", cfg.DataDir, "/tmp/test")
+	}
+	if cfg.LogDir != "/tmp/logs" {
+		t.Errorf("LogDir = %q, want %q", cfg.LogDir, "/tmp/logs")
+	}
+	if cfg.CacheDir != "/tmp/cache" {
+		t.Errorf("CacheDir = %q, want %q", cfg.CacheDir, "/tmp/cache")
 	}
 	if cfg.MaxFileSizeMB != 50 {
 		t.Errorf("MaxFileSizeMB = %d, want %d", cfg.MaxFileSizeMB, 50)
@@ -238,15 +256,15 @@ func TestIsOriginAllowed(t *testing.T) {
 		origin  string
 		want    bool
 	}{
-		{nil, "https://any.com", true},                                     // no restrictions
-		{[]string{}, "https://any.com", true},                              // empty = no restrictions
-		{[]string{"example.com"}, "https://example.com", true},             // exact match
-		{[]string{"example.com"}, "https://sub.example.com", true},         // subdomain
-		{[]string{"example.com"}, "https://evil.com", false},               // not allowed
-		{[]string{"a.com", "b.com"}, "https://a.com", true},                // multiple allowed
-		{[]string{"a.com", "b.com"}, "https://c.com", false},               // not in list
-		{[]string{"localhost"}, "http://localhost:3000", true},             // localhost with port
-		{[]string{"braterstwo.eu"}, "https://forum.braterstwo.eu", true},   // subdomain match
+		{nil, "https://any.com", true},                                   // no restrictions
+		{[]string{}, "https://any.com", true},                            // empty = no restrictions
+		{[]string{"example.com"}, "https://example.com", true},           // exact match
+		{[]string{"example.com"}, "https://sub.example.com", true},       // subdomain
+		{[]string{"example.com"}, "https://evil.com", false},             // not allowed
+		{[]string{"a.com", "b.com"}, "https://a.com", true},              // multiple allowed
+		{[]string{"a.com", "b.com"}, "https://c.com", false},             // not in list
+		{[]string{"localhost"}, "http://localhost:3000", true},           // localhost with port
+		{[]string{"braterstwo.eu"}, "https://forum.braterstwo.eu", true}, // subdomain match
 	}
 
 	for _, tt := range tests {

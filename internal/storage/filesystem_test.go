@@ -141,8 +141,7 @@ func TestFilesystem_Path(t *testing.T) {
 		want     string
 	}{
 		{"ab1c2", "original", filepath.Join(dir, "images", "ab", "ab1c2", "original.webp")},
-		{"ab1c2", "800", filepath.Join(dir, "images", "ab", "ab1c2", "800.webp")},
-		{"xyz99", "200", filepath.Join(dir, "images", "xy", "xyz99", "200.webp")},
+		{"xyz99", "thumb", filepath.Join(dir, "images", "xy", "xyz99", "thumb.webp")},
 	}
 
 	for _, tt := range tests {
@@ -196,7 +195,7 @@ func TestFilesystem_Save_MultipleSizes(t *testing.T) {
 	fs, _ := NewFilesystem(dir)
 
 	slug := "multi1"
-	sizes := []string{"original", "1920", "800", "200"}
+	sizes := []string{"original", "thumb"}
 
 	for _, size := range sizes {
 		data := []byte("data for " + size)
@@ -273,7 +272,7 @@ func TestFilesystem_Delete(t *testing.T) {
 
 	slug := "del01"
 	fs.Save(slug, "original", []byte("data"))
-	fs.Save(slug, "800", []byte("data"))
+	fs.Save(slug, "thumb", []byte("data"))
 
 	err := fs.Delete(slug)
 	if err != nil {

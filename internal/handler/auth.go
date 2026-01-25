@@ -2,13 +2,13 @@ package handler
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 	"strings"
 	"time"
 
 	"dajtu/internal/auth"
 	"dajtu/internal/config"
+	"dajtu/internal/logging"
 	"dajtu/internal/storage"
 )
 
@@ -58,21 +58,21 @@ func (h *AuthHandler) HandleBratSSO(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.decoder.Decode(data)
 	if err != nil {
-		log.Printf("SSO decode error: %v", err)
+		logging.Get("sso").Printf("SSO decode error: %v", err)
 		http.Error(w, "invalid SSO payload", http.StatusUnauthorized)
 		return
 	}
 
 	dbUser, err := h.db.GetOrCreateBratUser(user.Pseudonim)
 	if err != nil {
-		log.Printf("SSO user error: %v", err)
+		logging.Get("sso").Printf("SSO user error: %v", err)
 		http.Error(w, "user creation failed", http.StatusInternalServerError)
 		return
 	}
 
 	session, err := h.db.CreateSession(dbUser.ID, 30)
 	if err != nil {
-		log.Printf("Session creation error: %v", err)
+		logging.Get("sso").Printf("Session creation error: %v", err)
 		http.Error(w, "session creation failed", http.StatusInternalServerError)
 		return
 	}
@@ -100,9 +100,11 @@ func (h *AuthHandler) HandleBratSSO(w http.ResponseWriter, r *http.Request) {
 			"slug":    dbUser.Slug,
 			"name":    dbUser.DisplayName,
 		})
+		logging.Get("sso").Printf("SSO login success user=%s id=%d", dbUser.DisplayName, dbUser.ID)
 		return
 	}
 
+	logging.Get("sso").Printf("SSO login success user=%s id=%d", dbUser.DisplayName, dbUser.ID)
 	http.Redirect(w, r, "/?welcome=1", http.StatusFound)
 }
 
