@@ -1,0 +1,8 @@
+[Unit]
+Description=Dajtu cache cleanup
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/var/www/dajtu/scripts/cleanup-cache.sh
+User=root
