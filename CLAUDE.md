@@ -150,3 +150,45 @@ Rozważyć przekierowanie stderr do `data/logs/` przy deployu:
 
 ### CORS blokuje requesty z lokalnego dev
 Ustaw `ALLOWED_ORIGINS=` (pusty) lub zakomentuj w docker-compose.yml - wtedy przepuści wszystkie origin
+
+## Backup
+
+**Backend:** Restic → Backblaze B2
+**Harmonogram:** Codziennie o 3:00 (systemd timer)
+**Retencja:** 7 daily, 4 weekly, 3 monthly
+
+### Komendy
+
+```bash
+# Status backupu
+ssh staging "systemctl status dajtu-backup.timer"
+
+# Ręczny backup
+ssh staging "sudo /var/www/dajtu/scripts/backup.sh"
+
+# Lista snapshotów
+ssh staging "source /var/www/dajtu/backup/.env && restic snapshots"
+
+# Sprawdź integralność
+ssh staging "source /var/www/dajtu/backup/.env && restic check"
+
+# Restore (interaktywny)
+ssh staging "sudo /var/www/dajtu/scripts/restore.sh"
+
+# Logi ostatniego backupu
+ssh staging "tail -100 /var/www/dajtu/backup/backup.log"
+```
+
+### Pliki na staging
+
+- `/var/www/dajtu/backup/.env` - credentials (B2 + restic password)
+- `/var/www/dajtu/backup/backup.log` - logi backupów
+- `/var/www/dajtu/scripts/backup.sh` - skrypt backupu
+- `/var/www/dajtu/scripts/restore.sh` - skrypt restore
+
+### Co jest backupowane
+
+- `dajtu.db` - atomowa kopia SQLite (przez `.backup`)
+- `data/images/` - wszystkie obrazy
+
+**Uwaga:** WAL/SHM nie są backupowane - używamy `.backup` SQLite dla spójności.
