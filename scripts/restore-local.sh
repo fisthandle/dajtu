@@ -25,18 +25,42 @@ echo "Projekt: $PROJECT_DIR"
 echo "Data dir: $DATA_DIR"
 echo ""
 
-# Lista snapshotów
-echo "Dostępne snapshoty:"
-restic snapshots
-echo ""
+# Sprawdź czy istnieje poprzedni restore
+if [ -d "$RESTORE_DIR" ]; then
+    echo "Znaleziono poprzednio pobrany backup w: $RESTORE_DIR"
+    ls -la "$RESTORE_DIR"
+    echo ""
+    read -p "Użyć istniejącego? (yes = użyj, no = pobierz nowy): " USE_EXISTING
 
-read -p "Snapshot ID (lub 'latest'): " SNAPSHOT_ID
+    if [ "$USE_EXISTING" = "yes" ]; then
+        echo "Używam istniejącego backupu..."
+    else
+        # Lista snapshotów
+        echo "Dostępne snapshoty:"
+        restic snapshots
+        echo ""
 
-# Restore do tmp
-echo "Pobieram snapshot $SNAPSHOT_ID..."
-rm -rf "$RESTORE_DIR"
-mkdir -p "$RESTORE_DIR"
-restic restore "$SNAPSHOT_ID" --target "$RESTORE_DIR"
+        read -p "Snapshot ID (lub 'latest'): " SNAPSHOT_ID
+
+        # Restore do tmp
+        echo "Pobieram snapshot $SNAPSHOT_ID..."
+        rm -rf "$RESTORE_DIR"
+        mkdir -p "$RESTORE_DIR"
+        restic restore "$SNAPSHOT_ID" --target "$RESTORE_DIR"
+    fi
+else
+    # Lista snapshotów
+    echo "Dostępne snapshoty:"
+    restic snapshots
+    echo ""
+
+    read -p "Snapshot ID (lub 'latest'): " SNAPSHOT_ID
+
+    # Restore do tmp
+    echo "Pobieram snapshot $SNAPSHOT_ID..."
+    mkdir -p "$RESTORE_DIR"
+    restic restore "$SNAPSHOT_ID" --target "$RESTORE_DIR"
+fi
 
 echo ""
 echo "Pobrane pliki:"

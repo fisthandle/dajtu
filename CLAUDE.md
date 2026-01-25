@@ -13,6 +13,11 @@ ssh staging "cd /var/www/dajtu && docker compose up -d --force-recreate"
 ssh staging "docker logs dajtu_app --tail 100 -f"
 ```
 
+
+Lokalnie:
+go build -o dajtu ./cmd/dajtu && ./dajtu
+
+
 **Serwer:** staging (SSH config)
 **Ścieżka:** `/var/www/dajtu`
 **URL:** https://dajtu.com
@@ -154,7 +159,7 @@ Ustaw `ALLOWED_ORIGINS=` (pusty) lub zakomentuj w docker-compose.yml - wtedy prz
 ## Backup
 
 **Backend:** Restic → Backblaze B2
-**Harmonogram:** Codziennie o 3:00 (systemd timer)
+**Harmonogram:** Co godzinę (systemd timer)
 **Retencja:** 7 daily, 4 weekly, 3 monthly
 
 ### Komendy
