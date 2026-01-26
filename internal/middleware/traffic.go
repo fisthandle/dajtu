@@ -56,6 +56,9 @@ func (t *TrafficStats) Snapshot(now time.Time) TrafficSnapshot {
 		for i := int64(0); i < minutes; i++ {
 			minute := current - i
 			idx := minute % t.size
+			if idx < 0 {
+				idx += t.size
+			}
 			if t.marks[idx] == minute {
 				total += t.buckets[idx]
 			}

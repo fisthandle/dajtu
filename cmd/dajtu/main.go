@@ -303,7 +303,6 @@ func main() {
 					logging.Get("cache").Printf("cache hit slug=%s size=%s path=%s", slug, sizePart, cacheFile)
 					return resizeResult{path: cacheFile}, nil
 				}
-				logging.Get("cache").Printf("cache miss slug=%s size=%s path=%s", slug, sizePart, cacheFile)
 
 				data, err := os.ReadFile(originalPath)
 				if err != nil {
@@ -314,8 +313,6 @@ func main() {
 					return resizeResult{}, err
 				}
 				if targetWidth >= origWidth {
-					logging.Get("image").Printf("resize skip slug=%s size=%s reason=source_smaller_or_equal", slug, sizePart)
-					logging.Get("cache").Printf("cache bypass slug=%s size=%s reason=source_smaller_or_equal", slug, sizePart)
 					return resizeResult{path: originalPath}, nil
 				}
 

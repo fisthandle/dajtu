@@ -133,14 +133,7 @@ func (h *AdminHandler) Dashboard(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AdminHandler) Users(w http.ResponseWriter, r *http.Request) {
-	page := parseQueryInt(r, "page", 1)
-	limit := parseQueryInt(r, "limit", 300)
-	if limit < 1 {
-		limit = 300
-	}
-	if limit > 500 {
-		limit = 500
-	}
+	page, limit := parseAdminPaging(r, 300, 500)
 
 	sortBy := r.URL.Query().Get("sort")
 	if sortBy == "" {
@@ -157,21 +150,7 @@ func (h *AdminHandler) Users(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 500)
 		return
 	}
-	totalPages := total / limit
-	if total%limit != 0 {
-		totalPages++
-	}
-	if totalPages == 0 {
-		totalPages = 1
-	}
-	if page < 1 {
-		page = 1
-	}
-	if page > totalPages {
-		page = totalPages
-	}
-
-	offset := (page - 1) * limit
+	totalPages, page, offset, pages := paginateAdmin(total, page, limit)
 	users, err := h.db.ListUsersSortedFiltered(limit, offset, sortBy, dir, query)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
@@ -198,7 +177,6 @@ func (h *AdminHandler) Users(w http.ResponseWriter, r *http.Request) {
 		return fmt.Sprintf("/admin/users?page=1&limit=%d&sort=%s&dir=%s&q=%s", limit, field, nextDir, url.QueryEscape(query))
 	}
 
-	pages := adminPages(page, totalPages)
 	data := map[string]any{
 		"Users":      users,
 		"Total":      total,
@@ -246,14 +224,7 @@ func (h *AdminHandler) UserDetail(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AdminHandler) Galleries(w http.ResponseWriter, r *http.Request) {
-	page := parseQueryInt(r, "page", 1)
-	limit := parseQueryInt(r, "limit", 300)
-	if limit < 1 {
-		limit = 300
-	}
-	if limit > 500 {
-		limit = 500
-	}
+	page, limit := parseAdminPaging(r, 300, 500)
 
 	sortBy := r.URL.Query().Get("sort")
 	if sortBy == "" {
@@ -270,21 +241,7 @@ func (h *AdminHandler) Galleries(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 500)
 		return
 	}
-	totalPages := total / limit
-	if total%limit != 0 {
-		totalPages++
-	}
-	if totalPages == 0 {
-		totalPages = 1
-	}
-	if page < 1 {
-		page = 1
-	}
-	if page > totalPages {
-		page = totalPages
-	}
-
-	offset := (page - 1) * limit
+	totalPages, page, offset, pages := paginateAdmin(total, page, limit)
 	galleries, err := h.db.ListGalleriesAdminSortedFiltered(limit, offset, sortBy, dir, query)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
@@ -311,7 +268,6 @@ func (h *AdminHandler) Galleries(w http.ResponseWriter, r *http.Request) {
 		return fmt.Sprintf("/admin/galleries?page=1&limit=%d&sort=%s&dir=%s&q=%s", limit, field, nextDir, url.QueryEscape(query))
 	}
 
-	pages := adminPages(page, totalPages)
 	data := map[string]any{
 		"Galleries":  galleries,
 		"Total":      total,
@@ -374,14 +330,7 @@ func (h *AdminHandler) DeleteGallery(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AdminHandler) Images(w http.ResponseWriter, r *http.Request) {
-	page := parseQueryInt(r, "page", 1)
-	limit := parseQueryInt(r, "limit", 300)
-	if limit < 1 {
-		limit = 300
-	}
-	if limit > 500 {
-		limit = 500
-	}
+	page, limit := parseAdminPaging(r, 300, 500)
 
 	sortBy := r.URL.Query().Get("sort")
 	if sortBy == "" {
@@ -398,21 +347,7 @@ func (h *AdminHandler) Images(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 500)
 		return
 	}
-	totalPages := total / limit
-	if total%limit != 0 {
-		totalPages++
-	}
-	if totalPages == 0 {
-		totalPages = 1
-	}
-	if page < 1 {
-		page = 1
-	}
-	if page > totalPages {
-		page = totalPages
-	}
-
-	offset := (page - 1) * limit
+	totalPages, page, offset, pages := paginateAdmin(total, page, limit)
 	images, err := h.db.ListImagesAdminSortedFiltered(limit, offset, sortBy, dir, query)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
@@ -440,7 +375,6 @@ func (h *AdminHandler) Images(w http.ResponseWriter, r *http.Request) {
 		return fmt.Sprintf("/admin/images?page=1&limit=%d&sort=%s&dir=%s&q=%s", limit, field, nextDir, url.QueryEscape(query))
 	}
 
-	pages := adminPages(page, totalPages)
 	data := map[string]any{
 		"Images":     images,
 		"Total":      total,
@@ -553,6 +487,37 @@ func parseQueryInt(r *http.Request, key string, fallback int) int {
 		return fallback
 	}
 	return val
+}
+
+func parseAdminPaging(r *http.Request, defaultLimit, maxLimit int) (int, int) {
+	page := parseQueryInt(r, "page", 1)
+	limit := parseQueryInt(r, "limit", defaultLimit)
+	if limit < 1 {
+		limit = defaultLimit
+	}
+	if maxLimit > 0 && limit > maxLimit {
+		limit = maxLimit
+	}
+	return page, limit
+}
+
+func paginateAdmin(total, page, limit int) (int, int, int, []int) {
+	totalPages := total / limit
+	if total%limit != 0 {
+		totalPages++
+	}
+	if totalPages == 0 {
+		totalPages = 1
+	}
+	if page < 1 {
+		page = 1
+	}
+	if page > totalPages {
+		page = totalPages
+	}
+	offset := (page - 1) * limit
+	pages := adminPages(page, totalPages)
+	return totalPages, page, offset, pages
 }
 
 func adminPages(current, total int) []int {

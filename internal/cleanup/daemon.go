@@ -1,6 +1,8 @@
 package cleanup
 
 import (
+	"os"
+	"path/filepath"
 	"time"
 
 	"dajtu/internal/config"
@@ -33,6 +35,8 @@ func (d *Daemon) Start() {
 }
 
 func (d *Daemon) cleanup() {
+	d.cleanupCache()
+
 	if deleted, err := d.db.CleanExpiredSessions(); err != nil {
 		logging.Get("cleanup").Printf("cleanup: failed to clean sessions: %v", err)
 	} else if deleted > 0 {
@@ -90,4 +94,50 @@ func (d *Daemon) cleanup() {
 	}
 
 	logging.Get("cleanup").Printf("cleanup: done, current usage %.2f GB", float64(totalSize)/(1024*1024*1024))
+}
+
+func (d *Daemon) cleanupCache() {
+	if d.cfg.CacheDir == "" {
+		return
+	}
+	if _, err := os.Stat(d.cfg.CacheDir); err != nil {
+		if os.IsNotExist(err) {
+			return
+		}
+		logging.Get("cleanup").Printf("cleanup: cache stat error: %v", err)
+		return
+	}
+
+	cutoff := time.Now().Add(-48 * time.Hour)
+	var removed int
+	var bytes int64
+
+	err := filepath.WalkDir(d.cfg.CacheDir, func(path string, entry os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if entry.IsDir() {
+			return nil
+		}
+		info, err := entry.Info()
+		if err != nil {
+			return err
+		}
+		if info.ModTime().After(cutoff) {
+			return nil
+		}
+		if err := os.Remove(path); err != nil {
+			return err
+		}
+		removed++
+		bytes += info.Size()
+		return nil
+	})
+	if err != nil {
+		logging.Get("cleanup").Printf("cleanup: cache walk error: %v", err)
+		return
+	}
+	if removed > 0 {
+		logging.Get("cleanup").Printf("cleanup: cache removed %d files (%.2f MB)", removed, float64(bytes)/(1024*1024))
+	}
 }
